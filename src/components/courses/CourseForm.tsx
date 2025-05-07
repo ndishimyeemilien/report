@@ -19,7 +19,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { db } from "@/lib/firebase";
 import type { Course, UserProfile } from "@/types";
-import { addDoc, collection, doc, serverTimestamp, updateDoc, getDocs, query, where } from "firebase/firestore";
+import { addDoc, collection, doc, serverTimestamp, updateDoc, getDocs, query, where, deleteField, type FieldValue } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { Loader2 } from "lucide-react";
@@ -75,44 +75,64 @@ export function CourseForm({ initialData, onClose }: CourseFormProps) {
       name: initialData.name,
       code: initialData.code,
       description: initialData.description || "",
-      teacherId: initialData.teacherId || "",
+      teacherId: initialData.teacherId || "", // Handles case where teacherId might be undefined in initialData
     } : {
       name: "",
       code: "",
       description: "",
-      teacherId: "",
+      teacherId: "", // Default to empty string, representing "None" initially
     },
   });
 
   const onSubmit = async (values: CourseFormValues) => {
     setIsLoading(true);
     
-    const selectedTeacher = teachers.find(t => t.uid === values.teacherId);
-    // Ensure teacherId is truly empty if no teacher is selected, not "_NONE_"
-    const actualTeacherId = values.teacherId === NONE_TEACHER_VALUE ? "" : values.teacherId;
-    const teacherName = actualTeacherId ? (selectedTeacher ? selectedTeacher.email : null) : undefined;
-
-
-    const courseData: Partial<Course> = {
-        ...values,
-        teacherId: actualTeacherId || undefined, // Store undefined if empty
-        teacherName: teacherName || undefined,
-        updatedAt: serverTimestamp() as unknown as Date, 
+    const dataToSave: {
+        name: string;
+        code: string;
+        description: string | null;
+        teacherId?: string;
+        teacherName?: string | null;
+        updatedAt: FieldValue;
+        createdAt?: FieldValue;
+    } = {
+        name: values.name,
+        code: values.code,
+        description: values.description || null,
+        updatedAt: serverTimestamp(),
     };
 
+    // values.teacherId is either a UID or "" (if "None" selected and mapped by the Select's onChange)
+    if (values.teacherId && values.teacherId !== NONE_TEACHER_VALUE) {
+        const selectedTeacher = teachers.find(t => t.uid === values.teacherId);
+        dataToSave.teacherId = values.teacherId;
+        dataToSave.teacherName = selectedTeacher?.email || null;
+    }
+    // If values.teacherId is "" or NONE_TEACHER_VALUE, teacherId and teacherName remain undefined in dataToSave at this point
 
     try {
-      if (initialData) {
+      if (initialData) { // This is an UPDATE operation
         const courseRef = doc(db, "courses", initialData.id);
-        await updateDoc(courseRef, {
-            ...courseData
-        });
+        // Create a payload for update, explicitly excluding createdAt
+        const { createdAt, ...updatePayloadRest } = dataToSave;
+        const updatePayload: any = { ...updatePayloadRest };
+
+
+        if (!values.teacherId || values.teacherId === NONE_TEACHER_VALUE) { // If "None" was selected or teacherId is empty
+            updatePayload.teacherId = deleteField();
+            updatePayload.teacherName = deleteField();
+        } else {
+            // teacherId and teacherName are already set in dataToSave if a teacher was selected
+            // and will be part of updatePayloadRest
+        }
+        
+        await updateDoc(courseRef, updatePayload);
         toast({ title: "Course Updated", description: `Course "${values.name}" has been successfully updated.` });
-      } else {
-        await addDoc(collection(db, "courses"), {
-          ...courseData,
-          createdAt: serverTimestamp(),
-        });
+      } else { // This is an ADD operation
+        dataToSave.createdAt = serverTimestamp();
+        // If values.teacherId is empty, teacherId and teacherName are not in dataToSave,
+        // so they are not written, which is correct for addDoc.
+        await addDoc(collection(db, "courses"), dataToSave);
         toast({ title: "Course Added", description: `Course "${values.name}" has been successfully added.` });
       }
       router.refresh(); 
@@ -184,9 +204,11 @@ export function CourseForm({ initialData, onClose }: CourseFormProps) {
               <FormLabel>Assign Teacher (Optional)</FormLabel>
               <Select 
                 onValueChange={(value) => {
+                  // field.onChange maps NONE_TEACHER_VALUE to empty string for the form state
                   field.onChange(value === NONE_TEACHER_VALUE ? "" : value);
                 }} 
-                value={!field.value ? NONE_TEACHER_VALUE : field.value} // If teacherId is empty string, treat NONE_TEACHER_VALUE as selected
+                // If field.value is empty string (meaning "None"), Select displays NONE_TEACHER_VALUE placeholder
+                value={!field.value ? NONE_TEACHER_VALUE : field.value} 
                 disabled={isTeachersLoading}
               >
                 <FormControl>
@@ -196,12 +218,12 @@ export function CourseForm({ initialData, onClose }: CourseFormProps) {
                 </FormControl>
                 <SelectContent>
                   {isTeachersLoading ? (
-                    <SelectItem value="loading-teachers-placeholder" disabled>Loading...</SelectItem> // Use non-empty unique value
+                    <SelectItem value="loading-teachers-placeholder" disabled>Loading...</SelectItem> 
                   ) : (
                     <>
                       <SelectItem value={NONE_TEACHER_VALUE}>None</SelectItem>
                       {teachers.length === 0 && (
-                        <SelectItem value="no-teachers-placeholder" disabled>No teachers available.</SelectItem> // Use non-empty unique value
+                        <SelectItem value="no-teachers-placeholder" disabled>No teachers available.</SelectItem> 
                       )}
                       {teachers.map(teacher => (
                         <SelectItem key={teacher.uid} value={teacher.uid}>
