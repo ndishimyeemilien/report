@@ -4,10 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { GradeForm } from "@/components/grades/GradeForm";
 import type { Grade } from "@/types";
-import { db from "@/lib/firebase";
+import { db } from "@/lib/firebase";
 import { collection, deleteDoc, doc, getDocs, query, orderBy, Timestamp } from "firebase/firestore";
 import { useEffect, useState } from "react";
-import { PlusCircle, Edit3, Trash2, ClipboardList, Loader2, AlertTriangle, FileDown, Download } from "lucide-react";
+import { PlusCircle, Edit3, Trash2, ClipboardList, Loader2, AlertTriangle, Download } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -37,7 +37,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { ScrollArea from "@/components/ui/scroll-area";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 // Basic CSV export function
 const exportToCSV = (grades: Grade[]) => {

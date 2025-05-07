@@ -3,7 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
-import { Button from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
@@ -12,11 +12,11 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Input from "@/components/ui/input";
-import { Textarea from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useToast from "@/hooks/use-toast";
-import { db from "@/lib/firebase";
+import { useToast } from "@/hooks/use-toast";
+import { db } from "@/lib/firebase";
 import type { Grade, Course } from "@/types";
 import { addDoc, collection, doc, serverTimestamp, updateDoc, getDocs, query, orderBy } from "firebase/firestore";
 import { useRouter } from "next/navigation";
