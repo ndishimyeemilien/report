@@ -2,14 +2,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { collection, getDocs, query, orderBy, Timestamp } from "firebase/firestore";
+import { collection, getDocs, query, orderBy, Timestamp, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import type { Course, Grade } from "@/types";
+import type { Course, Grade, Student, Enrollment } from "@/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from "@/components/ui/chart";
-import { BarChart as RechartsBarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip as RechartsTooltip, Legend as RechartsLegend } from "recharts"; // Aliased BarChart to avoid conflict
+import { BarChart as RechartsBarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip as RechartsTooltip, Legend as RechartsLegend } from "recharts";
 import { Loader2, AlertTriangle, BarChart3, Percent, CheckCircle, XCircle, TrendingUp, TrendingDown, ListChecks, FileSpreadsheet, Users } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import Link from "next/link";
@@ -17,19 +17,21 @@ import { Button } from "@/components/ui/button";
 
 interface ReportData {
   overallStats: {
-    totalStudentsGraded: number; // Number of unique student names with grades
-    totalGradeEntries: number; // Total number of grade entries
+    totalStudentsGraded: number; 
+    totalGradeEntries: number; 
     averageMarks: number | null;
     passRate: number | null;
     failRate: number | null;
     highestMark: number | null;
     lowestMark: number | null;
+    totalRegisteredStudents: number; // Total unique students in 'students' collection
   };
   coursePerformance: Array<{
     courseId: string;
     courseName: string;
     courseCode: string;
-    totalStudentsInCourse: number; // Number of unique students graded in this course
+    totalStudentsEnrolled: number; // Number of unique students enrolled in this course
+    totalStudentsGradedInCourse: number; // Number of unique students with grades in this course
     averageMarks: number | null;
     passCount: number;
     failCount: number;
@@ -45,7 +47,7 @@ interface ReportData {
   totalCourses: number;
 }
 
-const PASS_MARK = 40; // Assuming 40 is the pass mark
+const PASS_MARK = 40; 
 
 export default function ReportsPage() {
   const [reportData, setReportData] = useState<ReportData | null>(null);
@@ -58,10 +60,15 @@ export default function ReportsPage() {
     try {
       const coursesQuery = query(collection(db, "courses"), orderBy("name"));
       const gradesQuery = query(collection(db, "grades"));
+      const studentsQuery = query(collection(db, "students"));
+      const enrollmentsQuery = query(collection(db, "enrollments"));
 
-      const [coursesSnapshot, gradesSnapshot] = await Promise.all([
+
+      const [coursesSnapshot, gradesSnapshot, studentsSnapshot, enrollmentsSnapshot] = await Promise.all([
         getDocs(coursesQuery),
         getDocs(gradesQuery),
+        getDocs(studentsQuery),
+        getDocs(enrollmentsQuery),
       ]);
 
       const courses = coursesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Course));
@@ -74,8 +81,10 @@ export default function ReportsPage() {
           updatedAt: (data.updatedAt as Timestamp)?.toDate(),
         } as Grade;
       });
+      const students = studentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data()} as Student));
+      const enrollments = enrollmentsSnapshot.docs.map(doc => ({id: doc.id, ...doc.data()} as Enrollment));
       
-      generateReportData(courses, grades);
+      generateReportData(courses, grades, students, enrollments);
 
     } catch (err: any) {
       console.error("Error fetching report data:", err);
@@ -90,13 +99,13 @@ export default function ReportsPage() {
     fetchAndProcessData();
   }, []);
 
-  const generateReportData = (courses: Course[], grades: Grade[]) => {
+  const generateReportData = (courses: Course[], grades: Grade[], students: Student[], enrollments: Enrollment[]) => {
     // Overall Stats
     let totalMarks = 0;
     let passCountOverall = 0;
     let highestMarkOverall: number | null = null;
     let lowestMarkOverall: number | null = null;
-    const uniqueStudentNames = new Set(grades.map(g => g.studentName.toLowerCase()));
+    const uniqueStudentIdsGraded = new Set(grades.map(g => g.studentId));
 
 
     if (grades.length > 0) {
@@ -115,7 +124,11 @@ export default function ReportsPage() {
     // Course Performance
     const coursePerformance = courses.map(course => {
       const courseGrades = grades.filter(grade => grade.courseId === course.id);
-      const uniqueStudentsInCourse = new Set(courseGrades.map(g => g.studentName.toLowerCase()));
+      const uniqueStudentIdsGradedInCourse = new Set(courseGrades.map(g => g.studentId));
+      
+      const courseEnrollments = enrollments.filter(e => e.courseId === course.id);
+      const uniqueStudentIdsEnrolledInCourse = new Set(courseEnrollments.map(e => e.studentId));
+
       let courseTotalMarks = 0;
       let coursePassCount = 0;
       let courseHighestMark: number | null = null;
@@ -135,7 +148,8 @@ export default function ReportsPage() {
         courseName: course.name,
         courseCode: course.code,
         teacherName: course.teacherName,
-        totalStudentsInCourse: uniqueStudentsInCourse.size,
+        totalStudentsEnrolled: uniqueStudentIdsEnrolledInCourse.size,
+        totalStudentsGradedInCourse: uniqueStudentIdsGradedInCourse.size,
         averageMarks: courseGrades.length > 0 ? courseTotalMarks / courseGrades.length : null,
         passCount: coursePassCount,
         failCount: courseGrades.length - coursePassCount,
@@ -145,7 +159,7 @@ export default function ReportsPage() {
       };
     });
 
-    // Marks Distribution (0-10, 11-20, ..., 91-100)
+    // Marks Distribution
     const marksDistribution = Array(10).fill(null).map((_, i) => ({
       range: i === 0 ? "0-10" : `${i * 10 + 1}-${(i + 1) * 10}`,
       count: 0,
@@ -163,7 +177,7 @@ export default function ReportsPage() {
       else if (mark <= 70) rangeIndex = 6;
       else if (mark <= 80) rangeIndex = 7;
       else if (mark <= 90) rangeIndex = 8;
-      else rangeIndex = 9; // 91-100
+      else rangeIndex = 9; 
 
       if (rangeIndex >=0 && rangeIndex < marksDistribution.length) {
          marksDistribution[rangeIndex].count++;
@@ -172,13 +186,14 @@ export default function ReportsPage() {
     
     setReportData({
       overallStats: {
-        totalStudentsGraded: uniqueStudentNames.size,
+        totalStudentsGraded: uniqueStudentIdsGraded.size,
         totalGradeEntries: grades.length,
         averageMarks: averageMarksOverall,
         passRate: passRateOverall,
         failRate: failRateOverall,
         highestMark: highestMarkOverall,
         lowestMark: lowestMarkOverall,
+        totalRegisteredStudents: students.length,
       },
       coursePerformance,
       marksDistribution,
@@ -222,7 +237,7 @@ export default function ReportsPage() {
     );
   }
 
-  if (!reportData || (reportData.totalCourses === 0 && reportData.overallStats.totalGradeEntries === 0) ) {
+  if (!reportData || (reportData.totalCourses === 0 && reportData.overallStats.totalGradeEntries === 0 && reportData.overallStats.totalRegisteredStudents === 0) ) {
     return (
       <div className="container mx-auto py-8">
         <div className="flex items-center justify-between mb-8">
@@ -235,16 +250,19 @@ export default function ReportsPage() {
             </div>
             <CardTitle className="mt-4 text-2xl">No Data for Reports</CardTitle>
             <CardDescription>
-              There are no courses or grades recorded in the system yet.
-              Please add courses and grades to generate reports.
+              There are no courses, grades, or students recorded in the system yet.
+              Please add relevant data to generate reports.
             </CardDescription>
           </CardHeader>
-           <CardContent>
+           <CardContent className="flex gap-2 justify-center">
             <Link href="/admin/dashboard/courses">
-              <Button variant="outline" className="mr-2">Add Courses</Button>
+              <Button variant="outline">Add Courses</Button>
             </Link>
             <Link href="/admin/dashboard/grades">
               <Button>Add Grades</Button>
+            </Link>
+             <Link href="/secretary/students">
+              <Button variant="secondary">Add Students</Button>
             </Link>
           </CardContent>
         </Card>
@@ -261,7 +279,7 @@ export default function ReportsPage() {
         <h1 className="text-3xl font-bold tracking-tight text-foreground">Academic Reports</h1>
       </div>
 
-      {reportData.overallStats.totalGradeEntries === 0 ? (
+      {reportData.overallStats.totalGradeEntries === 0 && reportData.overallStats.totalRegisteredStudents > 0 ? (
         <Card className="text-center py-12 mb-8">
             <CardHeader>
                 <div className="mx-auto bg-secondary rounded-full p-3 w-fit">
@@ -286,7 +304,14 @@ export default function ReportsPage() {
           <CardTitle className="text-xl text-primary">Overall Performance Snapshot</CardTitle>
           <CardDescription>Summary of academic performance across all courses and students.</CardDescription>
         </CardHeader>
-        <CardContent className="grid gap-4 md:grid-cols-3">
+        <CardContent className="grid gap-4 md:grid-cols-3 lg:grid-cols-4">
+          <div className="flex items-center space-x-3 rounded-md border p-4 bg-card hover:shadow-md transition-shadow">
+            <Users className="h-8 w-8 text-purple-500" />
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Registered Students</p>
+              <p className="text-2xl font-bold">{overallStats.totalRegisteredStudents}</p>
+            </div>
+          </div>
           <div className="flex items-center space-x-3 rounded-md border p-4 bg-card hover:shadow-md transition-shadow">
             <Users className="h-8 w-8 text-accent" />
             <div>
@@ -340,26 +365,28 @@ export default function ReportsPage() {
       </Card>
 
       {/* Marks Distribution Chart */}
-      <Card className="mb-8 shadow-lg">
-        <CardHeader>
-          <CardTitle className="text-xl text-primary">Marks Distribution</CardTitle>
-          <CardDescription>Distribution of all student marks across different ranges (0-100).</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ChartContainer config={chartConfig} className="h-[300px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <RechartsBarChart data={marksDistribution} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="range" tickLine={false} axisLine={false} />
-                <YAxis allowDecimals={false} tickLine={false} axisLine={false} />
-                <ChartTooltip content={<ChartTooltipContent />} />
-                 <RechartsLegend content={<ChartLegendContent />} />
-                <Bar dataKey="count" fill="var(--color-count)" radius={[4, 4, 0, 0]} />
-              </RechartsBarChart>
-            </ResponsiveContainer>
-          </ChartContainer>
-        </CardContent>
-      </Card>
+      {overallStats.totalGradeEntries > 0 && (
+        <Card className="mb-8 shadow-lg">
+            <CardHeader>
+            <CardTitle className="text-xl text-primary">Marks Distribution</CardTitle>
+            <CardDescription>Distribution of all student marks across different ranges (0-100).</CardDescription>
+            </CardHeader>
+            <CardContent>
+            <ChartContainer config={chartConfig} className="h-[300px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                <RechartsBarChart data={marksDistribution} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="range" tickLine={false} axisLine={false} />
+                    <YAxis allowDecimals={false} tickLine={false} axisLine={false} />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <RechartsLegend content={<ChartLegendContent />} />
+                    <Bar dataKey="count" fill="var(--color-count)" radius={[4, 4, 0, 0]} />
+                </RechartsBarChart>
+                </ResponsiveContainer>
+            </ChartContainer>
+            </CardContent>
+        </Card>
+      )}
 
       {/* Course Performance Table */}
       <Card className="shadow-lg">
@@ -375,7 +402,8 @@ export default function ReportsPage() {
                   <TableHead className="min-w-[200px]">Course Name</TableHead>
                   <TableHead>Code</TableHead>
                   <TableHead className="min-w-[150px]">Teacher</TableHead>
-                  <TableHead className="text-center">Graded Students</TableHead>
+                  <TableHead className="text-center">Enrolled</TableHead>
+                  <TableHead className="text-center">Graded</TableHead>
                   <TableHead className="text-center">Avg. Marks</TableHead>
                   <TableHead className="text-center">Pass Rate</TableHead>
                   <TableHead className="text-center">Highest</TableHead>
@@ -388,26 +416,27 @@ export default function ReportsPage() {
                     <TableCell className="font-medium">{course.courseName}</TableCell>
                     <TableCell>{course.courseCode}</TableCell>
                     <TableCell>{course.teacherName || <span className="italic text-muted-foreground">Not Assigned</span>}</TableCell>
-                    <TableCell className="text-center">{course.totalStudentsInCourse}</TableCell>
+                    <TableCell className="text-center">{course.totalStudentsEnrolled}</TableCell>
+                    <TableCell className="text-center">{course.totalStudentsGradedInCourse}</TableCell>
                     <TableCell className="text-center">{formatNumber(course.averageMarks)}%</TableCell>
                     <TableCell className="text-center">
                        {course.passRate !== null ? (
-                        <Badge variant={course.passRate >= PASS_MARK ? 'default' : (course.totalStudentsInCourse > 0 ? 'destructive' : 'secondary')}
+                        <Badge variant={course.passRate >= PASS_MARK ? 'default' : (course.totalStudentsGradedInCourse > 0 ? 'destructive' : 'secondary')}
                                className={
-                                course.totalStudentsInCourse === 0 ? 'bg-muted text-muted-foreground hover:bg-muted' :
+                                course.totalStudentsGradedInCourse === 0 ? 'bg-muted text-muted-foreground hover:bg-muted' :
                                 course.passRate >= PASS_MARK ? 'bg-green-500 hover:bg-green-600' 
                                 : 'bg-red-500 hover:bg-red-600'
                                }>
-                            {course.totalStudentsInCourse === 0 ? 'N/A' : `${formatNumber(course.passRate)}%`}
+                            {course.totalStudentsGradedInCourse === 0 ? 'N/A' : `${formatNumber(course.passRate)}%`}
                         </Badge>
                        ) : 'N/A'}
                     </TableCell>
-                    <TableCell className="text-center">{course.totalStudentsInCourse > 0 ? formatNumber(course.highestMark, 0) : 'N/A'}</TableCell>
-                    <TableCell className="text-center">{course.totalStudentsInCourse > 0 ? formatNumber(course.lowestMark, 0) : 'N/A'}</TableCell>
+                    <TableCell className="text-center">{course.totalStudentsGradedInCourse > 0 ? formatNumber(course.highestMark, 0) : 'N/A'}</TableCell>
+                    <TableCell className="text-center">{course.totalStudentsGradedInCourse > 0 ? formatNumber(course.lowestMark, 0) : 'N/A'}</TableCell>
                   </TableRow>
                 )) : (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                    <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
                       No courses available or no grades recorded for any course.
                     </TableCell>
                   </TableRow>
@@ -422,3 +451,4 @@ export default function ReportsPage() {
     </div>
   );
 }
+

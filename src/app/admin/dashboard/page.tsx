@@ -1,17 +1,21 @@
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { BookOpen, ClipboardList, Users, BarChart3 } from "lucide-react";
+import { BookOpen, ClipboardList, Users, BarChart3, UsersRound } from "lucide-react"; // Added UsersRound for enrollments
 import Link from "next/link";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import type { Course, Grade } from "@/types"; // Assuming types are defined
 
 async function getStats() {
   try {
     const coursesSnapshot = await getDocs(collection(db, "courses"));
     const gradesSnapshot = await getDocs(collection(db, "grades"));
+    const studentsSnapshot = await getDocs(collection(db, "students"));
+    const enrollmentsSnapshot = await getDocs(collection(db, "enrollments"));
     return {
       totalCourses: coursesSnapshot.size,
       totalGrades: gradesSnapshot.size,
+      totalStudents: studentsSnapshot.size,
+      totalEnrollments: enrollmentsSnapshot.size,
       error: null,
     };
   } catch (error) {
@@ -19,6 +23,8 @@ async function getStats() {
     return {
       totalCourses: 0,
       totalGrades: 0,
+      totalStudents: 0,
+      totalEnrollments: 0,
       error: "Could not load statistics.",
     };
   }
@@ -26,13 +32,14 @@ async function getStats() {
 
 
 export default async function DashboardPage() {
-  const { totalCourses, totalGrades, error: statsError } = await getStats();
+  const { totalCourses, totalGrades, totalStudents, totalEnrollments, error: statsError } = await getStats();
 
   const stats = [
-    { title: "Total Courses", value: totalCourses.toString(), icon: BookOpen, href: "/admin/dashboard/courses", bgColor: "bg-blue-100", textColor: "text-blue-700", iconColor: "text-blue-500" },
-    { title: "Grades Recorded", value: totalGrades.toString(), icon: ClipboardList, href: "/admin/dashboard/grades", bgColor: "bg-green-100", textColor: "text-green-700", iconColor: "text-green-500" },
-    { title: "View Reports", value: "Analytics", icon: BarChart3, href: "/admin/dashboard/reports", bgColor: "bg-yellow-100", textColor: "text-yellow-700", iconColor: "text-yellow-500" },
-    { title: "Total Students (Future)", value: "N/A", icon: Users, href: "#", bgColor: "bg-purple-100", textColor: "text-purple-700", iconColor: "text-purple-500", disabled: true },
+    { title: "Total Courses", value: totalCourses.toString(), icon: BookOpen, href: "/admin/dashboard/courses", iconColor: "text-blue-500" },
+    { title: "Grades Recorded", value: totalGrades.toString(), icon: ClipboardList, href: "/admin/dashboard/grades", iconColor: "text-green-500" },
+    { title: "Total Students", value: totalStudents.toString(), icon: Users, href: "/secretary/students", iconColor: "text-purple-500" }, // Link to secretary student page for admin view/management
+    { title: "Total Enrollments", value: totalEnrollments.toString(), icon: UsersRound, href: "/secretary/enrollments", iconColor: "text-teal-500" }, // Link to secretary enrollment page
+    { title: "View Reports", value: "Analytics", icon: BarChart3, href: "/admin/dashboard/reports", iconColor: "text-yellow-500" },
   ];
 
   return (
@@ -50,18 +57,17 @@ export default async function DashboardPage() {
         </Card>
       )}
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4"> {/* Adjusted for 4 items */}
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5"> {/* Adjusted for 5 items */}
         {stats.map((stat) => (
-           <Link href={stat.disabled ? "#" : stat.href} key={stat.title} className={stat.disabled ? "pointer-events-none" : ""}>
-            <Card className={`hover:shadow-lg transition-shadow duration-200 ${stat.disabled ? "opacity-60" : ""}`}>
+           <Link href={stat.href} key={stat.title}>
+            <Card className={`hover:shadow-lg transition-shadow duration-200`}>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">{stat.title}</CardTitle>
                 <stat.icon className={`h-5 w-5 ${stat.iconColor}`} />
               </CardHeader>
               <CardContent>
-                <div className={`text-3xl font-bold ${stat.textColor}`}>{stat.value}</div>
-                {!stat.disabled && <p className="text-xs text-muted-foreground pt-1">{stat.title === "View Reports" ? "Go to Reports" : "View Details"}</p>}
-                {stat.disabled && <p className="text-xs text-muted-foreground pt-1">Coming Soon</p>}
+                <div className={`text-3xl font-bold`}>{stat.value}</div>
+                <p className="text-xs text-muted-foreground pt-1">{stat.title === "View Reports" ? "Go to Reports" : "View Details"}</p>
               </CardContent>
             </Card>
           </Link>
@@ -73,30 +79,31 @@ export default async function DashboardPage() {
           <CardHeader>
             <CardTitle>Welcome to Report-Manager Lite!</CardTitle>
             <CardDescription>
-              This is your central hub for managing courses, student grades, and viewing reports.
+              This is your central hub for managing courses, student grades, viewing reports, and overseeing student and enrollment data.
               Use the navigation sidebar to access different modules.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <p className="text-muted-foreground">
-              Future enhancements will include student management, more detailed report generation, and advanced analytics.
+              Secretaries handle student and enrollment management. Teachers manage grades for their assigned courses. Admins have oversight of all areas.
             </p>
             <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="rounded-lg border bg-card p-6 shadow-sm">
-                    <h3 className="text-lg font-semibold mb-2 text-primary">Quick Start</h3>
+                    <h3 className="text-lg font-semibold mb-2 text-primary">Key Admin Functions</h3>
                     <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
-                        <li>Add new courses via the "Courses" section.</li>
-                        <li>Enter student grades under the "Grades" section.</li>
-                        <li>View academic insights in the "Reports" section.</li>
-                        <li>Monitor key statistics on this dashboard.</li>
+                        <li>Add and manage courses (assign teachers).</li>
+                        <li>View and manage all student grades (override if necessary).</li>
+                        <li>Access comprehensive academic reports.</li>
+                        <li>Oversee student records and enrollments (managed by Secretary).</li>
                     </ul>
                 </div>
                  <div className="rounded-lg border bg-card p-6 shadow-sm">
-                    <h3 className="text-lg font-semibold mb-2 text-accent">Tips for Usage</h3>
+                    <h3 className="text-lg font-semibold mb-2 text-accent">System Workflow</h3>
                      <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
-                        <li>Ensure course codes are unique for clarity.</li>
-                        <li>Regularly check the reports for performance trends.</li>
-                        <li>Keep an eye out for future updates and features!</li>
+                        <li>Admins create courses and assign teachers.</li>
+                        <li>Secretaries register students and enroll them in courses.</li>
+                        <li>Teachers enter grades for students in their assigned courses.</li>
+                        <li>Admins monitor overall academic performance via reports.</li>
                     </ul>
                 </div>
             </div>

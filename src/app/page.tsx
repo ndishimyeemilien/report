@@ -16,7 +16,10 @@ export default function HomePage() {
           router.replace("/admin/dashboard");
         } else if (userProfile.role === 'Teacher') {
           router.replace("/teacher/dashboard");
-        } else {
+        } else if (userProfile.role === 'Secretary') {
+          router.replace("/secretary/dashboard");
+        }
+         else {
           // Fallback or unhandled role
           router.replace("/login");
         }
@@ -33,3 +36,4 @@ export default function HomePage() {
     </div>
   );
 }
+

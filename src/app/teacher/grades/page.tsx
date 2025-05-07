@@ -4,12 +4,12 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { GradeForm } from "@/components/grades/GradeForm";
-import type { Grade, Course } from "@/types";
+import type { Grade, Course, Student, Enrollment } from "@/types"; // Added Student and Enrollment
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
 import { collection, deleteDoc, doc, getDocs, query, orderBy, Timestamp, where } from "firebase/firestore";
 import { useEffect, useState } from "react";
-import { PlusCircle, Edit3, Trash2, ClipboardList, Loader2, AlertTriangle, User, Info, BookOpen } from "lucide-react";
+import { PlusCircle, Edit3, Trash2, ClipboardList, Loader2, AlertTriangle, User, Info, BookOpen, Users } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -27,7 +27,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger, // Added AlertDialogTrigger
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import {
   Table,
@@ -56,13 +56,13 @@ export default function TeacherGradesPage() {
   const { userProfile, loading: authLoading } = useAuth();
   const searchParams = useSearchParams();
   const preselectedCourseId = searchParams.get('courseId');
-  // const preselectedCourseName = searchParams.get('courseName'); // Not directly used, but could be for display
-
+  
   const [grades, setGrades] = useState<Grade[]>([]);
   const [assignedCourses, setAssignedCourses] = useState<Course[]>([]);
+  const [enrolledStudents, setEnrolledStudents] = useState<Student[]>([]); // Students enrolled in selected course
   const [selectedCourseId, setSelectedCourseId] = useState<string | null>(preselectedCourseId);
-  const [isLoading, setIsLoading] = useState(true); // General loading for page or course selection
-  const [isGradesLoading, setIsGradesLoading] = useState(false); // Specific for grades table
+  const [isLoading, setIsLoading] = useState(true);
+  const [isGradesLoading, setIsGradesLoading] = useState(false);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingGrade, setEditingGrade] = useState<Grade | null>(null);
   const { toast } = useToast();
@@ -70,7 +70,7 @@ export default function TeacherGradesPage() {
   // Fetch assigned courses for the teacher
   useEffect(() => {
     if (!userProfile || authLoading) {
-      setIsLoading(false); // If auth is still loading or no user, stop general loading
+      setIsLoading(false);
       return;
     }
     setIsLoading(true);
@@ -81,14 +81,11 @@ export default function TeacherGradesPage() {
         const coursesData = querySnapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data(),
-          createdAt: (doc.data().createdAt as Timestamp)?.toDate(),
-          updatedAt: (doc.data().updatedAt as Timestamp)?.toDate(),
         })) as Course[];
         setAssignedCourses(coursesData);
-        if (coursesData.length > 0 && !selectedCourseId) { // if no course is preselected or currently selected
+        if (coursesData.length > 0 && !selectedCourseId) {
           setSelectedCourseId(coursesData[0].id); 
         } else if (preselectedCourseId && !coursesData.find(c => c.id === preselectedCourseId)) {
-          // If preselected course is not in assigned list, deselect it.
            toast({title:"Course Not Found", description: "The previously selected course is not assigned to you or does not exist.", variant: "destructive"});
            setSelectedCourseId(coursesData.length > 0 ? coursesData[0].id : null);
         }
@@ -102,31 +99,51 @@ export default function TeacherGradesPage() {
     fetchAssignedCourses();
   }, [userProfile, authLoading, toast, preselectedCourseId]);
 
-  // Fetch grades for the selected course
-  const fetchGrades = async (courseId: string | null) => {
+  // Fetch grades AND enrolled students for the selected course
+  const fetchCourseData = async (courseId: string | null) => {
     if (!courseId || !userProfile) {
       setGrades([]);
+      setEnrolledStudents([]);
       setIsGradesLoading(false);
       return;
     }
     setIsGradesLoading(true);
     try {
-      const q = query(
+      // Fetch Grades
+      const gradesQuery = query(
         collection(db, "grades"), 
         where("courseId", "==", courseId),
         orderBy("studentName", "asc")
       );
-      const querySnapshot = await getDocs(q);
-      const gradesData = querySnapshot.docs.map(doc => ({
+      const gradesSnapshot = await getDocs(gradesQuery);
+      const gradesData = gradesSnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
         createdAt: (doc.data().createdAt as Timestamp)?.toDate(),
         updatedAt: (doc.data().updatedAt as Timestamp)?.toDate(),
       })) as Grade[];
       setGrades(gradesData);
+
+      // Fetch Enrollments for this course
+      const enrollmentsQuery = query(collection(db, "enrollments"), where("courseId", "==", courseId));
+      const enrollmentsSnapshot = await getDocs(enrollmentsQuery);
+      const studentIdsInCourse = enrollmentsSnapshot.docs.map(doc => (doc.data() as Enrollment).studentId);
+
+      if (studentIdsInCourse.length > 0) {
+        // Fetch student details for enrolled students
+        // Firestore 'in' query limitation: max 30 elements in array. For more, batch queries or restructure data.
+        // For simplicity, assuming <30 students per course or handle batching if necessary.
+        const studentsQuery = query(collection(db, "students"), where(document.id, "in", studentIdsInCourse.slice(0,30)));
+        const studentsSnapshot = await getDocs(studentsQuery);
+        const studentsData = studentsSnapshot.docs.map(doc => ({id: doc.id, ...doc.data()} as Student));
+        setEnrolledStudents(studentsData.sort((a, b) => a.fullName.localeCompare(b.fullName)));
+      } else {
+        setEnrolledStudents([]);
+      }
+
     } catch (err: any) {
-      console.error("Error fetching grades: ", err);
-      toast({ title: "Error", description: `Failed to load grades for selected course.`, variant: "destructive" });
+      console.error("Error fetching course data: ", err);
+      toast({ title: "Error", description: `Failed to load data for selected course.`, variant: "destructive" });
     } finally {
       setIsGradesLoading(false);
     }
@@ -134,9 +151,10 @@ export default function TeacherGradesPage() {
 
   useEffect(() => {
     if(selectedCourseId) {
-      fetchGrades(selectedCourseId);
+      fetchCourseData(selectedCourseId);
     } else {
       setGrades([]); 
+      setEnrolledStudents([]);
       setIsGradesLoading(false);
     }
   }, [selectedCourseId, userProfile]);
@@ -156,6 +174,10 @@ export default function TeacherGradesPage() {
         toast({ title: "Select Course", description: "Please select a course before adding a grade.", variant: "default" });
         return;
     }
+    if (enrolledStudents.length === 0) {
+        toast({ title: "No Students Enrolled", description: "No students are enrolled in this course. Please enroll students first or contact the secretary.", variant: "default" });
+        return;
+    }
     setEditingGrade(null);
     setIsFormOpen(true);
   };
@@ -168,7 +190,7 @@ export default function TeacherGradesPage() {
     try {
       await deleteDoc(doc(db, "grades", grade.id));
       toast({ title: "Grade Deleted", description: `Grade for ${grade.studentName} in ${grade.courseName} deleted.` });
-      if (selectedCourseId) fetchGrades(selectedCourseId);
+      if (selectedCourseId) fetchCourseData(selectedCourseId);
     } catch (error: any) {
       console.error("Error deleting grade: ", error);
       toast({ title: "Delete Failed", description: error.message || "Could not delete grade.", variant: "destructive" });
@@ -177,7 +199,7 @@ export default function TeacherGradesPage() {
 
   const currentCourseForForm = selectedCourseId ? assignedCourses.find(c => c.id === selectedCourseId) : undefined;
 
-  if (authLoading || isLoading) { // Show main loader if auth or initial course list is loading
+  if (authLoading || isLoading) {
     return <div className="flex justify-center items-center h-64"><Loader2 className="h-12 w-12 animate-spin text-primary" /> <p className="ml-2">Loading data...</p></div>;
   }
 
@@ -206,7 +228,7 @@ export default function TeacherGradesPage() {
             </Select>
             <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
               <DialogTrigger asChild>
-                <Button onClick={handleAddNew} className="bg-accent hover:bg-accent/90 w-full sm:w-auto" disabled={!selectedCourseId || isGradesLoading}>
+                <Button onClick={handleAddNew} className="bg-accent hover:bg-accent/90 w-full sm:w-auto" disabled={!selectedCourseId || isGradesLoading || enrolledStudents.length === 0}>
                   <PlusCircle className="mr-2 h-5 w-5" /> Add New Grade
                 </Button>
               </DialogTrigger>
@@ -217,14 +239,15 @@ export default function TeacherGradesPage() {
                     {editingGrade ? "Update student's grade." : `Enter student's grade for ${currentCourseForForm?.name || 'selected course'}.`}
                   </DialogDescription>
                 </DialogHeader>
-                {currentCourseForForm && ( // Only render form if a course is selected
+                {currentCourseForForm && (
                   <GradeForm 
                     initialData={editingGrade}
-                    availableCourses={[currentCourseForForm]} // Pass only the current selected course
+                    course={currentCourseForForm} // Pass selected course
+                    students={enrolledStudents} // Pass enrolled students for dropdown
                     onClose={() => {
                       setIsFormOpen(false);
                       setEditingGrade(null);
-                      if (selectedCourseId) fetchGrades(selectedCourseId);
+                      if (selectedCourseId) fetchCourseData(selectedCourseId);
                     }} 
                   />
                 )}
@@ -236,7 +259,7 @@ export default function TeacherGradesPage() {
       {isGradesLoading && selectedCourseId && (
         <div className="flex justify-center items-center h-64">
           <Loader2 className="h-12 w-12 animate-spin text-primary" />
-          <p className="ml-4 text-lg text-muted-foreground">Loading grades for selected course...</p>
+          <p className="ml-4 text-lg text-muted-foreground">Loading data for selected course...</p>
         </div>
       )}
 
@@ -252,7 +275,7 @@ export default function TeacherGradesPage() {
         </Card>
       )}
 
-       {!isLoading && assignedCourses.length === 0 && !authLoading && ( // Was !isLoading, changed to !isCourseListLoading
+       {!isLoading && assignedCourses.length === 0 && !authLoading && (
          <Card className="text-center py-12">
             <CardHeader>
                 <div className="mx-auto bg-secondary rounded-full p-3 w-fit">
@@ -269,9 +292,24 @@ export default function TeacherGradesPage() {
         </Card>
       )}
 
-
-      {!isGradesLoading && selectedCourseId && grades.length === 0 && (
+      {!isGradesLoading && selectedCourseId && enrolledStudents.length === 0 && (
         <Card className="text-center py-12">
+          <CardHeader>
+            <div className="mx-auto bg-secondary rounded-full p-3 w-fit">
+             <Users className="h-12 w-12 text-muted-foreground" data-ai-hint="users empty"/>
+            </div>
+            <CardTitle className="mt-4 text-2xl">No Students Enrolled</CardTitle>
+            <CardDescription>
+              No students are currently enrolled in {assignedCourses.find(c => c.id === selectedCourseId)?.name || 'this course'}.
+              A secretary needs to enroll students first.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      )}
+
+
+      {!isGradesLoading && selectedCourseId && enrolledStudents.length > 0 && grades.length === 0 && (
+         <Card className="text-center py-12">
           <CardHeader>
             <div className="mx-auto bg-secondary rounded-full p-3 w-fit">
              <ClipboardList className="h-12 w-12 text-muted-foreground" data-ai-hint="list empty"/>
@@ -378,3 +416,4 @@ export default function TeacherGradesPage() {
     </TooltipProvider>
   );
 }
+

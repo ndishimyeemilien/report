@@ -4,7 +4,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { GradeForm } from "@/components/grades/GradeForm";
-import type { Grade } from "@/types";
+import type { Grade, Course, Student } from "@/types"; // Added Course and Student
 import { db } from "@/lib/firebase";
 import { collection, deleteDoc, doc, getDocs, query, orderBy, Timestamp } from "firebase/firestore";
 import { useEffect, useState } from "react";
@@ -26,7 +26,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger, // Added AlertDialogTrigger
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import {
   Table,
@@ -48,9 +48,12 @@ const exportToCSV = (grades: Grade[]) => {
     alert("No grades to export.");
     return;
   }
-  const headers = ["Student Name", "Course Code", "Course Name", "Marks", "Status", "Remarks", "Entered By", "Date Recorded"];
+  const headers = ["Student Name","Student System ID", "Course Code", "Course Name", "Marks", "Status", "Remarks", "Entered By", "Date Recorded"];
   const rows = grades.map(grade => [
     grade.studentName,
+    // Assuming studentSystemId might be available on grade if denormalized, or needs fetching
+    // For simplicity, not fetching here, add if student data is easily joinable or denormalized on grade
+    "", // Placeholder for studentSystemId
     grade.courseName.split('(')[1]?.replace(')','').trim() || 'N/A', 
     grade.courseName.split('(')[0].trim(),
     grade.marks,
@@ -76,36 +79,53 @@ const exportToCSV = (grades: Grade[]) => {
 
 export default function GradesPage() {
   const [grades, setGrades] = useState<Grade[]>([]);
+  const [allCourses, setAllCourses] = useState<Course[]>([]); // For admin form
+  const [allStudents, setAllStudents] = useState<Student[]>([]); // For admin form
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingGrade, setEditingGrade] = useState<Grade | null>(null);
   const { toast } = useToast();
 
-  const fetchGrades = async () => {
+  const fetchAllData = async () => {
     setIsLoading(true);
     setError(null);
     try {
-      const q = query(collection(db, "grades"), orderBy("createdAt", "desc"));
-      const querySnapshot = await getDocs(q);
-      const gradesData = querySnapshot.docs.map(doc => ({
+      const gradesQuery = query(collection(db, "grades"), orderBy("createdAt", "desc"));
+      const coursesQuery = query(collection(db, "courses"), orderBy("name"));
+      const studentsQuery = query(collection(db, "students"), orderBy("fullName"));
+
+      const [gradesSnapshot, coursesSnapshot, studentsSnapshot] = await Promise.all([
+        getDocs(gradesQuery),
+        getDocs(coursesQuery),
+        getDocs(studentsQuery),
+      ]);
+      
+      const gradesData = gradesSnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
         createdAt: (doc.data().createdAt as Timestamp)?.toDate(),
         updatedAt: (doc.data().updatedAt as Timestamp)?.toDate(),
       })) as Grade[];
       setGrades(gradesData);
+
+      const coursesData = coursesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Course));
+      setAllCourses(coursesData);
+
+      const studentsData = studentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Student));
+      setAllStudents(studentsData);
+
     } catch (err: any) {
-      console.error("Error fetching grades: ", err);
-      setError("Failed to load grades. Please try again.");
-      toast({ title: "Error", description: "Failed to load grades.", variant: "destructive" });
+      console.error("Error fetching data: ", err);
+      setError("Failed to load data. Please try again.");
+      toast({ title: "Error", description: "Failed to load page data.", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchGrades();
+    fetchAllData();
   }, []);
 
   const handleEdit = (grade: Grade) => {
@@ -122,7 +142,7 @@ export default function GradesPage() {
     try {
       await deleteDoc(doc(db, "grades", gradeId));
       toast({ title: "Grade Deleted", description: `Grade for ${studentName} in ${courseName} deleted.` });
-      fetchGrades(); 
+      fetchAllData(); // Refetch all data as grades changed
     } catch (error: any)
     {
       console.error("Error deleting grade: ", error);
@@ -130,6 +150,8 @@ export default function GradesPage() {
     }
   };
   
+  const selectedCourseForForm = editingGrade ? allCourses.find(c => c.id === editingGrade.courseId) : (allCourses.length > 0 ? allCourses[0] : undefined);
+
   return (
     <TooltipProvider>
     <div className="container mx-auto py-8">
@@ -141,7 +163,7 @@ export default function GradesPage() {
           </Button>
           <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
             <DialogTrigger asChild>
-              <Button onClick={handleAddNew} className="bg-accent hover:bg-accent/90">
+              <Button onClick={handleAddNew} className="bg-accent hover:bg-accent/90" disabled={allCourses.length === 0 || allStudents.length === 0}>
                 <PlusCircle className="mr-2 h-5 w-5" /> Add New Grade
               </Button>
             </DialogTrigger>
@@ -149,17 +171,39 @@ export default function GradesPage() {
               <DialogHeader>
                 <DialogTitle className="text-xl">{editingGrade ? "Edit Grade" : "Add New Grade"}</DialogTitle>
                 <DialogDescription>
-                  {editingGrade ? "Update the student's grade details." : "Enter the student's grade information."}
+                  {editingGrade ? "Update the student's grade details." : "Enter the student's grade information. Admins can assign grades for any student in any course."}
                 </DialogDescription>
               </DialogHeader>
-              <GradeForm 
-                initialData={editingGrade} 
-                onClose={() => {
-                  setIsFormOpen(false);
-                  setEditingGrade(null);
-                  fetchGrades(); 
-                }} 
-              />
+              {/* 
+                For Admin 'Add New', the GradeForm needs a way to select course AND student.
+                The current GradeForm is designed for teachers who have a pre-selected course.
+                A more complex GradeForm or a different form might be needed for Admin "Add New" if they need to select student and course independently.
+                For simplicity in Lite, we pass the first course and all students. GradeForm will need adjustment to allow course selection if `course` prop is not provided.
+                Alternatively, Admin "Add New" could be a two-step process: select course, then student.
+                
+                Passing allCourses and allStudents to the GradeForm for Admin.
+                The GradeForm component will need to be adapted to handle this.
+                If a specific course is not passed, it should allow course selection.
+                If a specific list of students (enrolled) is not passed, it should allow selecting from allStudents.
+              */}
+               {(allCourses.length > 0 && allStudents.length > 0) && (
+                <GradeForm 
+                    initialData={editingGrade} 
+                    // Admin might not have a "current course" context like teachers.
+                    // The GradeForm would need to allow course selection if `course` is not passed.
+                    // For "edit", we can find the course. For "add", it's trickier with current GradeForm.
+                    course={selectedCourseForForm!} // This needs to be a valid Course object or GradeForm updated
+                    students={allStudents} // Admin can select from all students
+                    onClose={() => {
+                        setIsFormOpen(false);
+                        setEditingGrade(null);
+                        fetchAllData(); 
+                    }} 
+                />
+               )}
+               {(allCourses.length === 0 || allStudents.length === 0) && !isLoading &&(
+                 <p className="text-sm text-muted-foreground py-4">Please add courses and students before adding grades.</p>
+               )}
             </DialogContent>
           </Dialog>
         </div>
@@ -180,7 +224,7 @@ export default function GradesPage() {
           </CardHeader>
           <CardContent>
             <p className="text-destructive-foreground">{error}</p>
-            <Button onClick={fetchGrades} variant="outline" className="mt-4">Try Again</Button>
+            <Button onClick={fetchAllData} variant="outline" className="mt-4">Try Again</Button>
           </CardContent>
         </Card>
       )}
@@ -291,3 +335,4 @@ export default function GradesPage() {
     </TooltipProvider>
   );
 }
+

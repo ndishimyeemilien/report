@@ -31,15 +31,25 @@ const formSchema = z.object({
   email: z.string().email({ message: "Invalid email address." }),
   password: z.string().min(6, { message: "Password must be at least 6 characters." }),
   confirmPassword: z.string(),
-  role: z.enum(['Admin', 'Teacher'], { required_error: "Please select a role." }),
+  role: z.enum(['Admin', 'Teacher', 'Secretary'], { required_error: "Please select a role." }),
   adminSecret: z.string().optional(),
 }).refine(data => data.password === data.confirmPassword, {
   message: "Passwords don't match",
   path: ["confirmPassword"],
-}).refine(data => data.role === 'Admin' ? !!data.adminSecret && data.adminSecret.length > 0 : true, {
+}).refine(data => {
+  if (data.role === 'Admin') {
+    return !!data.adminSecret && data.adminSecret.length > 0;
+  }
+  return true;
+}, {
   message: "Admin secret code is required for Admin role.",
   path: ["adminSecret"],
-}).refine(data => data.role === 'Admin' ? data.adminSecret === ADMIN_SECRET_CODE : true, {
+}).refine(data => {
+  if (data.role === 'Admin') {
+    return data.adminSecret === ADMIN_SECRET_CODE;
+  }
+  return true;
+}, {
   message: "Invalid admin secret code.",
   path: ["adminSecret"],
 });
@@ -57,7 +67,7 @@ export function RegisterForm() {
       email: "",
       password: "",
       confirmPassword: "",
-      role: undefined, // Ensure user makes a selection
+      role: undefined, 
       adminSecret: "",
     },
   });
@@ -66,7 +76,6 @@ export function RegisterForm() {
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
-    // Secret code validation is now part of Zod schema refinement
     
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
@@ -183,6 +192,7 @@ export function RegisterForm() {
                 <SelectContent>
                   <SelectItem value="Admin">Admin</SelectItem>
                   <SelectItem value="Teacher">Teacher</SelectItem>
+                  <SelectItem value="Secretary">Secretary</SelectItem>
                 </SelectContent>
               </Select>
               <FormMessage />
@@ -218,3 +228,4 @@ export function RegisterForm() {
     </Form>
   );
 }
+

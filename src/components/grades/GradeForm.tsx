@@ -17,19 +17,19 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { db, auth } from "@/lib/firebase"; // Import auth
-import type { Grade, Course } from "@/types";
-import { useAuth } from "@/context/AuthContext"; // Import useAuth
-import { addDoc, collection, doc, serverTimestamp, updateDoc, getDocs, query, orderBy } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import type { Grade, Course, Student } from "@/types"; // Added Student
+import { useAuth } from "@/context/AuthContext";
+import { addDoc, collection, doc, serverTimestamp, updateDoc, query, where, getDocs } from "firebase/firestore";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { Loader2 } from "lucide-react";
 
 const PASS_MARK = 40;
 
 const gradeFormSchema = z.object({
-  studentName: z.string().min(2, { message: "Student name must be at least 2 characters." }).max(100),
-  courseId: z.string().min(1, { message: "Please select a course." }),
+  studentId: z.string().min(1, { message: "Please select a student." }),
+  // courseId is now implicitly set by the passed `course` prop
   marks: z.coerce.number().min(0, "Marks cannot be negative.").max(100, "Marks cannot exceed 100."),
   remarks: z.string().max(200).optional(),
 });
@@ -39,56 +39,25 @@ type GradeFormValues = z.infer<typeof gradeFormSchema>;
 interface GradeFormProps {
   initialData?: Grade | null;
   onClose?: () => void;
-  // If courses are pre-filtered for teachers, pass them directly
-  // Otherwise, the form fetches all courses (for Admin) or could be adapted
-  availableCourses?: Course[]; 
+  course: Course; // The course for which grades are being entered
+  students: Student[]; // List of students enrolled in this course
 }
 
-export function GradeForm({ initialData, onClose, availableCourses }: GradeFormProps) {
+export function GradeForm({ initialData, onClose, course, students }: GradeFormProps) {
   const { toast } = useToast();
   const router = useRouter();
-  const { currentUser, userProfile } = useAuth(); // Get current user
+  const { currentUser, userProfile } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
-  const [courses, setCourses] = useState<Course[]>([]);
-  const [isCoursesLoading, setIsCoursesLoading] = useState(true);
-
-  useEffect(() => {
-    if (availableCourses) {
-      setCourses(availableCourses);
-      setIsCoursesLoading(false);
-    } else {
-      // Admin or situation where all courses are needed
-      const fetchCourses = async () => {
-        setIsCoursesLoading(true);
-        try {
-          const q = query(collection(db, "courses"), orderBy("name"));
-          const querySnapshot = await getDocs(q);
-          const coursesData = querySnapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data(),
-          })) as Course[];
-          setCourses(coursesData);
-        } catch (error) {
-          console.error("Error fetching courses for grade form: ", error);
-          toast({ title: "Error", description: "Could not load courses.", variant: "destructive" });
-        } finally {
-          setIsCoursesLoading(false);
-        }
-      };
-      fetchCourses();
-    }
-  }, [toast, availableCourses]);
+  const [isDataLoading, setIsDataLoading] = useState(false); // For any async ops inside form if needed
 
   const form = useForm<GradeFormValues>({
     resolver: zodResolver(gradeFormSchema),
     defaultValues: initialData ? {
-      studentName: initialData.studentName,
-      courseId: initialData.courseId,
+      studentId: initialData.studentId,
       marks: initialData.marks,
       remarks: initialData.remarks || "",
     } : {
-      studentName: "",
-      courseId: "",
+      studentId: "",
       marks: 0,
       remarks: "",
     },
@@ -102,20 +71,44 @@ export function GradeForm({ initialData, onClose, availableCourses }: GradeFormP
         return;
     }
     
-    const selectedCourse = courses.find(c => c.id === values.courseId);
-    if (!selectedCourse) {
-        toast({ title: "Error", description: "Selected course not found.", variant: "destructive" });
+    const selectedStudent = students.find(s => s.id === values.studentId);
+    if (!selectedStudent) {
+        toast({ title: "Error", description: "Selected student not found.", variant: "destructive" });
         setIsLoading(false);
         return;
     }
 
+    // Check if grade already exists for this student in this course (for new entries only)
+    if (!initialData) {
+      const gradeQuery = query(
+        collection(db, "grades"),
+        where("studentId", "==", values.studentId),
+        where("courseId", "==", course.id)
+      );
+      const gradeSnapshot = await getDocs(gradeQuery);
+      if (!gradeSnapshot.empty) {
+        toast({
+          title: "Grade Exists",
+          description: `${selectedStudent.fullName} already has a grade recorded for ${course.name}. You can edit it from the table.`,
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
+      }
+    }
+
+
     const status: 'Pass' | 'Fail' = values.marks >= PASS_MARK ? 'Pass' : 'Fail';
 
-    const gradePayload: Partial<Grade> = {
-        ...values,
-        courseName: selectedCourse.name,
+    const gradePayload: Partial<Omit<Grade, 'id'>> = {
+        studentId: values.studentId,
+        studentName: selectedStudent.fullName,
+        courseId: course.id, // Use the passed course prop
+        courseName: `${course.name} (${course.code})`,
+        marks: values.marks,
         status,
-        updatedAt: serverTimestamp() as unknown as Date, // Firestore SDK handles this
+        remarks: values.remarks,
+        updatedAt: serverTimestamp() as unknown as Date,
         enteredByTeacherId: userProfile.uid,
         enteredByTeacherEmail: userProfile.email || undefined,
     };
@@ -125,13 +118,13 @@ export function GradeForm({ initialData, onClose, availableCourses }: GradeFormP
       if (initialData) {
         const gradeRef = doc(db, "grades", initialData.id);
         await updateDoc(gradeRef, gradePayload);
-        toast({ title: "Grade Updated", description: `Grade for ${values.studentName} in ${selectedCourse.name} updated.` });
+        toast({ title: "Grade Updated", description: `Grade for ${selectedStudent.fullName} in ${course.name} updated.` });
       } else {
         await addDoc(collection(db, "grades"), {
           ...gradePayload,
           createdAt: serverTimestamp(),
         });
-        toast({ title: "Grade Added", description: `Grade for ${values.studentName} in ${selectedCourse.name} added.` });
+        toast({ title: "Grade Added", description: `Grade for ${selectedStudent.fullName} in ${course.name} added.` });
       }
       router.refresh();
       if (onClose) onClose();
@@ -151,40 +144,31 @@ export function GradeForm({ initialData, onClose, availableCourses }: GradeFormP
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <FormField
+         <FormField
           control={form.control}
-          name="studentName"
+          name="studentId"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Student Name</FormLabel>
-              <FormControl>
-                <Input placeholder="e.g., John Doe" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="courseId"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Course</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isCoursesLoading}>
+              <FormLabel>Student</FormLabel>
+              <Select 
+                onValueChange={field.onChange} 
+                defaultValue={field.value} 
+                disabled={isDataLoading || !!initialData} // Disable if editing existing grade
+              >
                 <FormControl>
                   <SelectTrigger>
-                    <SelectValue placeholder={isCoursesLoading ? "Loading courses..." : "Select a course"} />
+                    <SelectValue placeholder={isDataLoading ? "Loading students..." : (students.length === 0 ? "No students enrolled" : "Select an enrolled student")} />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  {isCoursesLoading ? (
+                  {isDataLoading ? (
                     <SelectItem value="loading" disabled>Loading...</SelectItem>
-                  ) : courses.length === 0 ? (
-                     <SelectItem value="no-courses" disabled>No courses available. Add a course first.</SelectItem>
+                  ) : students.length === 0 ? (
+                     <SelectItem value="no-students" disabled>No students enrolled in this course.</SelectItem>
                   ) : (
-                    courses.map(course => (
-                      <SelectItem key={course.id} value={course.id}>
-                        {course.name} ({course.code})
+                    students.map(student => (
+                      <SelectItem key={student.id} value={student.id}>
+                        {student.fullName} {student.studentSystemId ? `(${student.studentSystemId})` : ''}
                       </SelectItem>
                     ))
                   )}
@@ -194,6 +178,7 @@ export function GradeForm({ initialData, onClose, availableCourses }: GradeFormP
             </FormItem>
           )}
         />
+        {/* Course selection is removed, as course is passed as a prop */}
         <FormField
           control={form.control}
           name="marks"
@@ -226,12 +211,12 @@ export function GradeForm({ initialData, onClose, availableCourses }: GradeFormP
         />
         <div className="flex justify-end gap-2">
           {onClose && (
-            <Button type="button" variant="outline" onClick={onClose} disabled={isLoading || isCoursesLoading}>
+            <Button type="button" variant="outline" onClick={onClose} disabled={isLoading || isDataLoading}>
               Cancel
             </Button>
           )}
-          <Button type="submit" disabled={isLoading || isCoursesLoading || (courses.length === 0 && !isCoursesLoading)} className="bg-accent hover:bg-accent/90">
-            {(isLoading || isCoursesLoading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          <Button type="submit" disabled={isLoading || isDataLoading || (students.length === 0 && !isDataLoading)} className="bg-accent hover:bg-accent/90">
+            {(isLoading || isDataLoading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {initialData ? "Update Grade" : "Add Grade"}
           </Button>
         </div>
@@ -239,3 +224,4 @@ export function GradeForm({ initialData, onClose, availableCourses }: GradeFormP
     </Form>
   );
 }
+

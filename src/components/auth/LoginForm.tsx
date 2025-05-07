@@ -63,7 +63,10 @@ export function LoginForm() {
           router.push("/admin/dashboard");
         } else if (userProfile.role === "Teacher") {
           router.push("/teacher/dashboard");
-        } else {
+        } else if (userProfile.role === "Secretary") {
+          router.push("/secretary/dashboard");
+        }
+         else {
           // Fallback if role is not defined or unexpected
           router.push("/"); 
         }
