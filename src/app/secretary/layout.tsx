@@ -1,4 +1,3 @@
-
 "use client";
 import SecretaryHeader from "@/components/layout/SecretaryHeader"; 
 import SecretarySidebar from "@/components/layout/SecretarySidebar"; 
@@ -50,3 +49,4 @@ export default function SecretaryLayout({
     </div>
   );
 }
+

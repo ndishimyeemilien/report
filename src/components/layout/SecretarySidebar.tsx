@@ -1,4 +1,3 @@
-
 import Logo from "@/components/shared/Logo";
 import SecretarySidebarNav from "./SecretarySidebarNav";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -15,3 +14,4 @@ export default function SecretarySidebar() {
     </aside>
   );
 }
+

@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, BookOpen, UsersRound, BarChart3 } from "lucide-react";
 import Link from "next/link";
@@ -88,3 +87,4 @@ export default async function SecretaryDashboardPage() {
     </div>
   );
 }
+

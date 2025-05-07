@@ -1,4 +1,3 @@
-
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -25,34 +24,36 @@ import Link from "next/link";
 import { useState } from "react";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 
-const ADMIN_SECRET_CODE = "emilien&jules"; 
+// Admin secret code can be re-enabled if stricter admin creation is desired.
+// const ADMIN_SECRET_CODE = "emilien&jules"; 
 
 const formSchema = z.object({
   email: z.string().email({ message: "Invalid email address." }),
   password: z.string().min(6, { message: "Password must be at least 6 characters." }),
   confirmPassword: z.string(),
   role: z.enum(['Admin', 'Teacher', 'Secretary'], { required_error: "Please select a role." }),
-  adminSecret: z.string().optional(),
+  // adminSecret: z.string().optional(), // Re-enable if using ADMIN_SECRET_CODE
 }).refine(data => data.password === data.confirmPassword, {
   message: "Passwords don't match",
   path: ["confirmPassword"],
-}).refine(data => {
-  if (data.role === 'Admin') {
-    return !!data.adminSecret && data.adminSecret.length > 0;
-  }
-  return true;
-}, {
-  message: "Admin secret code is required for Admin role.",
-  path: ["adminSecret"],
-}).refine(data => {
-  if (data.role === 'Admin') {
-    return data.adminSecret === ADMIN_SECRET_CODE;
-  }
-  return true;
-}, {
-  message: "Invalid admin secret code.",
-  path: ["adminSecret"],
 });
+// .refine(data => { // Re-enable if using ADMIN_SECRET_CODE
+//   if (data.role === 'Admin') {
+//     return !!data.adminSecret && data.adminSecret.length > 0;
+//   }
+//   return true;
+// }, {
+//   message: "Admin secret code is required for Admin role.",
+//   path: ["adminSecret"],
+// }).refine(data => { // Re-enable if using ADMIN_SECRET_CODE
+//   if (data.role === 'Admin') {
+//     return data.adminSecret === ADMIN_SECRET_CODE;
+//   }
+//   return true;
+// }, {
+//   message: "Invalid admin secret code.",
+//   path: ["adminSecret"],
+// });
 
 export function RegisterForm() {
   const { toast } = useToast();
@@ -68,11 +69,11 @@ export function RegisterForm() {
       password: "",
       confirmPassword: "",
       role: undefined, 
-      adminSecret: "",
+      // adminSecret: "", // Re-enable if using ADMIN_SECRET_CODE
     },
   });
 
-  const selectedRole = form.watch("role");
+  // const selectedRole = form.watch("role"); // Re-enable if using ADMIN_SECRET_CODE
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
@@ -199,6 +200,7 @@ export function RegisterForm() {
             </FormItem>
           )}
         />
+        {/* Re-enable if using ADMIN_SECRET_CODE
         {selectedRole === 'Admin' && (
           <FormField
             control={form.control}
@@ -214,6 +216,7 @@ export function RegisterForm() {
             )}
           />
         )}
+        */}
         <Button type="submit" className="w-full" disabled={isLoading}>
           {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           Register

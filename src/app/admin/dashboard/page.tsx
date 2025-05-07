@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { BookOpen, ClipboardList, Users, BarChart3, UsersRound } from "lucide-react"; // Added UsersRound for enrollments
 import Link from "next/link";
@@ -113,3 +112,4 @@ export default async function DashboardPage() {
     </div>
   );
 }
+

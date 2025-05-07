@@ -1,4 +1,3 @@
-
 "use client";
 
 import type { User } from 'firebase/auth';
@@ -32,21 +31,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const userDocSnap = await getDoc(userDocRef);
         if (userDocSnap.exists()) {
           const profileData = userDocSnap.data();
-          // Ensure role is set, default to 'Admin' if missing (e.g. for users created before role field)
-          // Ideally, role should always be set upon user creation.
+          // Ensure role is set, default to 'Secretary' if missing (e.g. for users created before role field or via other auth)
+          // Registration form explicitly sets the role.
           setUserProfile({
+            uid: user.uid,
+            email: user.email,
             ...profileData,
-            role: profileData.role || 'Admin', // Default to Admin if role is not set
+            role: profileData.role || 'Secretary', // Default to Secretary if role is not set
           } as UserProfile);
         } else {
           // This case is for a new user, typically handled during registration.
-          // For Report-Manager Lite, registration creates Admins.
-          // If a user somehow authenticates without a profile, create a default Admin one.
+          // If a user somehow authenticates without a profile (e.g. direct Firebase SDK auth), create a default Secretary profile.
           const newProfile: UserProfile = { 
             uid: user.uid, 
             email: user.email, 
-            role: 'Admin' // New users from basic auth (not registration form) might hit this.
-                          // Registration form explicitly sets role.
+            role: 'Secretary' // New users outside formal registration get Secretary role.
           };
           await setDoc(userDocRef, newProfile);
           setUserProfile(newProfile);
@@ -86,3 +85,4 @@ export const useAuth = () => {
   }
   return context;
 };
+

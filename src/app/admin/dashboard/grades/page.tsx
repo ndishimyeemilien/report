@@ -1,4 +1,3 @@
-
 "use client";
 
 import { Button } from "@/components/ui/button";
@@ -101,18 +100,18 @@ export default function GradesPage() {
         getDocs(studentsQuery),
       ]);
       
-      const gradesData = gradesSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        createdAt: (doc.data().createdAt as Timestamp)?.toDate(),
-        updatedAt: (doc.data().updatedAt as Timestamp)?.toDate(),
+      const gradesData = gradesSnapshot.docs.map(gradeDoc => ({ 
+        id: gradeDoc.id,
+        ...gradeDoc.data(),
+        createdAt: (gradeDoc.data().createdAt as Timestamp)?.toDate(),
+        updatedAt: (gradeDoc.data().updatedAt as Timestamp)?.toDate(),
       })) as Grade[];
       setGrades(gradesData);
 
-      const coursesData = coursesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Course));
+      const coursesData = coursesSnapshot.docs.map(courseDoc => ({ id: courseDoc.id, ...courseDoc.data() } as Course)); 
       setAllCourses(coursesData);
 
-      const studentsData = studentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Student));
+      const studentsData = studentsSnapshot.docs.map(studentDoc => ({ id: studentDoc.id, ...studentDoc.data() } as Student)); 
       setAllStudents(studentsData);
 
     } catch (err: any) {
@@ -150,7 +149,9 @@ export default function GradesPage() {
     }
   };
   
-  const selectedCourseForForm = editingGrade ? allCourses.find(c => c.id === editingGrade.courseId) : (allCourses.length > 0 ? allCourses[0] : undefined);
+  const selectedCourseForForm = editingGrade 
+                                 ? allCourses.find(c => c.id === editingGrade.courseId) 
+                                 : (allCourses.length > 0 ? allCourses[0] : undefined); // Default to first course for 'Add New' if courses exist
 
   return (
     <TooltipProvider>
@@ -174,25 +175,10 @@ export default function GradesPage() {
                   {editingGrade ? "Update the student's grade details." : "Enter the student's grade information. Admins can assign grades for any student in any course."}
                 </DialogDescription>
               </DialogHeader>
-              {/* 
-                For Admin 'Add New', the GradeForm needs a way to select course AND student.
-                The current GradeForm is designed for teachers who have a pre-selected course.
-                A more complex GradeForm or a different form might be needed for Admin "Add New" if they need to select student and course independently.
-                For simplicity in Lite, we pass the first course and all students. GradeForm will need adjustment to allow course selection if `course` prop is not provided.
-                Alternatively, Admin "Add New" could be a two-step process: select course, then student.
-                
-                Passing allCourses and allStudents to the GradeForm for Admin.
-                The GradeForm component will need to be adapted to handle this.
-                If a specific course is not passed, it should allow course selection.
-                If a specific list of students (enrolled) is not passed, it should allow selecting from allStudents.
-              */}
-               {(allCourses.length > 0 && allStudents.length > 0) && (
+               {(allCourses.length > 0 && allStudents.length > 0 && selectedCourseForForm) && ( // Ensure selectedCourseForForm is defined
                 <GradeForm 
                     initialData={editingGrade} 
-                    // Admin might not have a "current course" context like teachers.
-                    // The GradeForm would need to allow course selection if `course` is not passed.
-                    // For "edit", we can find the course. For "add", it's trickier with current GradeForm.
-                    course={selectedCourseForForm!} // This needs to be a valid Course object or GradeForm updated
+                    course={selectedCourseForForm} // Pass the determined course
                     students={allStudents} // Admin can select from all students
                     onClose={() => {
                         setIsFormOpen(false);
@@ -201,8 +187,12 @@ export default function GradesPage() {
                     }} 
                 />
                )}
-               {(allCourses.length === 0 || allStudents.length === 0) && !isLoading &&(
-                 <p className="text-sm text-muted-foreground py-4">Please add courses and students before adding grades.</p>
+               {((allCourses.length === 0 || allStudents.length === 0) || (!selectedCourseForForm && !editingGrade && allCourses.length > 0)) && !isLoading && (
+                 <p className="text-sm text-muted-foreground py-4">
+                    {allCourses.length === 0 && "Please add courses first. "}
+                    {allStudents.length === 0 && "Please add students first. "}
+                    {!selectedCourseForForm && !editingGrade && allCourses.length > 0 && "Could not determine a default course for adding new grade."}
+                 </p>
                )}
             </DialogContent>
           </Dialog>

@@ -1,4 +1,3 @@
-
 "use client";
 
 import { Button } from "@/components/ui/button";
@@ -85,7 +84,7 @@ export default function SecretaryStudentsPage() {
 
   const handleDelete = async (studentId: string, studentName: string) => {
     // Consider implications: delete enrollments? grades?
-    // For now, simple delete.
+    // For now, simple delete. In a full app, this would need careful handling or soft deletes.
     try {
       await deleteDoc(doc(db, "students", studentId));
       toast({ title: "Student Deleted", description: `Student "${studentName}" has been deleted.` });
@@ -231,3 +230,4 @@ export default function SecretaryStudentsPage() {
     </div>
   );
 }
+

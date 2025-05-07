@@ -1,4 +1,3 @@
-
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -22,7 +21,7 @@ import type { Grade, Course, Student } from "@/types"; // Added Student
 import { useAuth } from "@/context/AuthContext";
 import { addDoc, collection, doc, serverTimestamp, updateDoc, query, where, getDocs } from "firebase/firestore";
 import { useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Loader2 } from "lucide-react";
 
 const PASS_MARK = 40;
@@ -40,7 +39,7 @@ interface GradeFormProps {
   initialData?: Grade | null;
   onClose?: () => void;
   course: Course; // The course for which grades are being entered
-  students: Student[]; // List of students enrolled in this course
+  students: Student[]; // List of students (should be enrolled students for teachers)
 }
 
 export function GradeForm({ initialData, onClose, course, students }: GradeFormProps) {
@@ -48,7 +47,7 @@ export function GradeForm({ initialData, onClose, course, students }: GradeFormP
   const router = useRouter();
   const { currentUser, userProfile } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
-  const [isDataLoading, setIsDataLoading] = useState(false); // For any async ops inside form if needed
+  const [isDataLoading, setIsDataLoading] = useState(false); 
 
   const form = useForm<GradeFormValues>({
     resolver: zodResolver(gradeFormSchema),
@@ -157,14 +156,14 @@ export function GradeForm({ initialData, onClose, course, students }: GradeFormP
               >
                 <FormControl>
                   <SelectTrigger>
-                    <SelectValue placeholder={isDataLoading ? "Loading students..." : (students.length === 0 ? "No students enrolled" : "Select an enrolled student")} />
+                    <SelectValue placeholder={isDataLoading ? "Loading students..." : (students.length === 0 ? "No students available/enrolled" : "Select a student")} />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
                   {isDataLoading ? (
-                    <SelectItem value="loading" disabled>Loading...</SelectItem>
+                    <SelectItem value="loading-placeholder" disabled>Loading...</SelectItem>
                   ) : students.length === 0 ? (
-                     <SelectItem value="no-students" disabled>No students enrolled in this course.</SelectItem>
+                     <SelectItem value="no-students-placeholder" disabled>No students available/enrolled in this course.</SelectItem>
                   ) : (
                     students.map(student => (
                       <SelectItem key={student.id} value={student.id}>

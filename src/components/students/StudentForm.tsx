@@ -1,4 +1,3 @@
-
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -145,3 +144,4 @@ export function StudentForm({ initialData, onClose }: StudentFormProps) {
     </Form>
   );
 }
+
