@@ -9,8 +9,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from "@/components/ui/chart";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip as RechartsTooltip, Legend as RechartsLegend } from "recharts";
-import { Loader2, AlertTriangle, BarChart3, Percent, CheckCircle, XCircle, TrendingUp, TrendingDown, ListChecks } from "lucide-react";
+import { Loader2, AlertTriangle, BarChart3, Percent, CheckCircle, XCircle, TrendingUp, TrendingDown, ListChecks, Users } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 
 interface ReportData {
   overallStats: {
@@ -397,3 +399,4 @@ export default function ReportsPage() {
     </div>
   );
 }
+
