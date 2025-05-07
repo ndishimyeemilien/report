@@ -17,9 +17,9 @@ export const navItems: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/dashboard/courses", label: "Courses", icon: BookOpen },
   { href: "/dashboard/grades", label: "Grades", icon: ClipboardList },
+  { href: "/dashboard/reports", label: "Reports", icon: FileText },
   // Add more items as features are built, e.g.:
   // { href: "/dashboard/students", label: "Students", icon: Users, disabled: true },
-  // { href: "/dashboard/reports", label: "Reports", icon: FileText, disabled: true },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
