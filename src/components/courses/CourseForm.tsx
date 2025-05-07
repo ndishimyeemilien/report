@@ -39,6 +39,8 @@ interface CourseFormProps {
   onClose?: () => void;
 }
 
+const NONE_TEACHER_VALUE = "_NONE_"; // Special value for "None" option
+
 export function CourseForm({ initialData, onClose }: CourseFormProps) {
   const { toast } = useToast();
   const router = useRouter();
@@ -86,12 +88,16 @@ export function CourseForm({ initialData, onClose }: CourseFormProps) {
     setIsLoading(true);
     
     const selectedTeacher = teachers.find(t => t.uid === values.teacherId);
-    const teacherName = selectedTeacher ? selectedTeacher.email : null; // Using email as name for now
+    // Ensure teacherId is truly empty if no teacher is selected, not "_NONE_"
+    const actualTeacherId = values.teacherId === NONE_TEACHER_VALUE ? "" : values.teacherId;
+    const teacherName = actualTeacherId ? (selectedTeacher ? selectedTeacher.email : null) : undefined;
+
 
     const courseData: Partial<Course> = {
         ...values,
-        teacherName: values.teacherId ? teacherName || undefined : undefined, // Store teacher's email as name
-        updatedAt: serverTimestamp() as unknown as Date, // Firestore SDK handles this
+        teacherId: actualTeacherId || undefined, // Store undefined if empty
+        teacherName: teacherName || undefined,
+        updatedAt: serverTimestamp() as unknown as Date, 
     };
 
 
@@ -177,8 +183,10 @@ export function CourseForm({ initialData, onClose }: CourseFormProps) {
             <FormItem>
               <FormLabel>Assign Teacher (Optional)</FormLabel>
               <Select 
-                onValueChange={field.onChange} 
-                defaultValue={field.value} 
+                onValueChange={(value) => {
+                  field.onChange(value === NONE_TEACHER_VALUE ? "" : value);
+                }} 
+                value={!field.value ? NONE_TEACHER_VALUE : field.value} // If teacherId is empty string, treat NONE_TEACHER_VALUE as selected
                 disabled={isTeachersLoading}
               >
                 <FormControl>
@@ -188,12 +196,13 @@ export function CourseForm({ initialData, onClose }: CourseFormProps) {
                 </FormControl>
                 <SelectContent>
                   {isTeachersLoading ? (
-                    <SelectItem value="loading" disabled>Loading...</SelectItem>
-                  ) : teachers.length === 0 ? (
-                     <SelectItem value="no-teachers" disabled>No teachers available.</SelectItem>
+                    <SelectItem value="loading-teachers-placeholder" disabled>Loading...</SelectItem> // Use non-empty unique value
                   ) : (
                     <>
-                      <SelectItem value="">None</SelectItem>
+                      <SelectItem value={NONE_TEACHER_VALUE}>None</SelectItem>
+                      {teachers.length === 0 && (
+                        <SelectItem value="no-teachers-placeholder" disabled>No teachers available.</SelectItem> // Use non-empty unique value
+                      )}
                       {teachers.map(teacher => (
                         <SelectItem key={teacher.uid} value={teacher.uid}>
                           {teacher.email} (Teacher)
@@ -222,3 +231,4 @@ export function CourseForm({ initialData, onClose }: CourseFormProps) {
     </Form>
   );
 }
+
