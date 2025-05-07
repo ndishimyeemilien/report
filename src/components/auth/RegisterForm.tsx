@@ -1,3 +1,4 @@
+
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -13,26 +14,34 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { auth, db } from "@/lib/firebase";
 import { doc, setDoc } from "firebase/firestore";
-import type { UserProfile } from "@/types";
+import type { UserProfile, UserRole } from "@/types";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useState } from "react";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 
-const ADMIN_SECRET_CODE = "emilien&jules"; // The secret code
+const ADMIN_SECRET_CODE = "emilien&jules"; 
 
 const formSchema = z.object({
   email: z.string().email({ message: "Invalid email address." }),
   password: z.string().min(6, { message: "Password must be at least 6 characters." }),
   confirmPassword: z.string(),
-  adminSecret: z.string().min(1, { message: "Admin secret code is required." }),
+  role: z.enum(['Admin', 'Teacher'], { required_error: "Please select a role." }),
+  adminSecret: z.string().optional(),
 }).refine(data => data.password === data.confirmPassword, {
   message: "Passwords don't match",
   path: ["confirmPassword"],
+}).refine(data => data.role === 'Admin' ? !!data.adminSecret && data.adminSecret.length > 0 : true, {
+  message: "Admin secret code is required for Admin role.",
+  path: ["adminSecret"],
+}).refine(data => data.role === 'Admin' ? data.adminSecret === ADMIN_SECRET_CODE : true, {
+  message: "Invalid admin secret code.",
+  path: ["adminSecret"],
 });
 
 export function RegisterForm() {
@@ -48,37 +57,31 @@ export function RegisterForm() {
       email: "",
       password: "",
       confirmPassword: "",
+      role: undefined, // Ensure user makes a selection
       adminSecret: "",
     },
   });
 
+  const selectedRole = form.watch("role");
+
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
-    if (values.adminSecret !== ADMIN_SECRET_CODE) {
-      toast({
-        title: "Registration Failed",
-        description: "Invalid admin secret code.",
-        variant: "destructive",
-      });
-      setIsLoading(false);
-      return;
-    }
-
+    // Secret code validation is now part of Zod schema refinement
+    
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
       const user = userCredential.user;
 
-      // Create user profile in Firestore
       const userProfile: UserProfile = {
         uid: user.uid,
         email: user.email,
-        role: "Admin", // All registered users are Admins for now
+        role: values.role as UserRole,
       };
       await setDoc(doc(db, "users", user.uid), userProfile);
 
       toast({
         title: "Registration Successful",
-        description: "Your admin account has been created. Please login.",
+        description: `Your ${values.role} account has been created. Please login.`,
       });
       router.push("/login");
     } catch (error: any) {
@@ -103,7 +106,7 @@ export function RegisterForm() {
             <FormItem>
               <FormLabel>Email</FormLabel>
               <FormControl>
-                <Input placeholder="admin@example.com" {...field} />
+                <Input placeholder="user@example.com" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -167,20 +170,43 @@ export function RegisterForm() {
         />
         <FormField
           control={form.control}
-          name="adminSecret"
+          name="role"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Admin Secret Code</FormLabel>
-              <FormControl>
-                <Input type="password" placeholder="Enter secret code" {...field} />
-              </FormControl>
+              <FormLabel>Role</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a role" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="Admin">Admin</SelectItem>
+                  <SelectItem value="Teacher">Teacher</SelectItem>
+                </SelectContent>
+              </Select>
               <FormMessage />
             </FormItem>
           )}
         />
+        {selectedRole === 'Admin' && (
+          <FormField
+            control={form.control}
+            name="adminSecret"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Admin Secret Code</FormLabel>
+                <FormControl>
+                  <Input type="password" placeholder="Enter secret code for Admin" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
         <Button type="submit" className="w-full" disabled={isLoading}>
           {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          Register Admin
+          Register
         </Button>
          <p className="text-center text-sm text-muted-foreground">
           Already have an account?{" "}

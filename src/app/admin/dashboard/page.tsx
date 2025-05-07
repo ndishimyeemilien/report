@@ -29,9 +29,9 @@ export default async function DashboardPage() {
   const { totalCourses, totalGrades, error: statsError } = await getStats();
 
   const stats = [
-    { title: "Total Courses", value: totalCourses.toString(), icon: BookOpen, href: "/dashboard/courses", bgColor: "bg-blue-100", textColor: "text-blue-700", iconColor: "text-blue-500" },
-    { title: "Grades Recorded", value: totalGrades.toString(), icon: ClipboardList, href: "/dashboard/grades", bgColor: "bg-green-100", textColor: "text-green-700", iconColor: "text-green-500" },
-    { title: "View Reports", value: "Analytics", icon: BarChart3, href: "/dashboard/reports", bgColor: "bg-yellow-100", textColor: "text-yellow-700", iconColor: "text-yellow-500" },
+    { title: "Total Courses", value: totalCourses.toString(), icon: BookOpen, href: "/admin/dashboard/courses", bgColor: "bg-blue-100", textColor: "text-blue-700", iconColor: "text-blue-500" },
+    { title: "Grades Recorded", value: totalGrades.toString(), icon: ClipboardList, href: "/admin/dashboard/grades", bgColor: "bg-green-100", textColor: "text-green-700", iconColor: "text-green-500" },
+    { title: "View Reports", value: "Analytics", icon: BarChart3, href: "/admin/dashboard/reports", bgColor: "bg-yellow-100", textColor: "text-yellow-700", iconColor: "text-yellow-500" },
     { title: "Total Students (Future)", value: "N/A", icon: Users, href: "#", bgColor: "bg-purple-100", textColor: "text-purple-700", iconColor: "text-purple-500", disabled: true },
   ];
 

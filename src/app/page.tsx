@@ -1,3 +1,4 @@
+
 "use client";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
@@ -5,18 +6,25 @@ import { useEffect } from "react";
 import { Loader2 } from "lucide-react";
 
 export default function HomePage() {
-  const { currentUser, loading } = useAuth();
+  const { currentUser, userProfile, loading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
     if (!loading) {
-      if (currentUser) {
-        router.replace("/dashboard");
+      if (currentUser && userProfile) {
+        if (userProfile.role === 'Admin') {
+          router.replace("/admin/dashboard");
+        } else if (userProfile.role === 'Teacher') {
+          router.replace("/teacher/dashboard");
+        } else {
+          // Fallback or unhandled role
+          router.replace("/login");
+        }
       } else {
         router.replace("/login");
       }
     }
-  }, [currentUser, loading, router]);
+  }, [currentUser, userProfile, loading, router]);
 
   return (
     <div className="flex h-screen items-center justify-center bg-background">

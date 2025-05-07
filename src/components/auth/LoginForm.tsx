@@ -1,3 +1,4 @@
+
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -15,7 +16,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { signInWithEmailAndPassword } from "firebase/auth";
-import { auth } from "@/lib/firebase";
+import { auth, db } from "@/lib/firebase";
+import { doc, getDoc } from "firebase/firestore";
+import type { UserProfile } from "@/types";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useState } from "react";
@@ -43,12 +46,36 @@ export function LoginForm() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
     try {
-      await signInWithEmailAndPassword(auth, values.email, values.password);
-      toast({
-        title: "Login Successful",
-        description: "Welcome back!",
-      });
-      router.push("/dashboard");
+      const userCredential = await signInWithEmailAndPassword(auth, values.email, values.password);
+      const user = userCredential.user;
+
+      // Fetch user profile to determine role for redirection
+      const userDocRef = doc(db, "users", user.uid);
+      const userDocSnap = await getDoc(userDocRef);
+
+      if (userDocSnap.exists()) {
+        const userProfile = userDocSnap.data() as UserProfile;
+        toast({
+          title: "Login Successful",
+          description: "Welcome back!",
+        });
+        if (userProfile.role === "Admin") {
+          router.push("/admin/dashboard");
+        } else if (userProfile.role === "Teacher") {
+          router.push("/teacher/dashboard");
+        } else {
+          // Fallback if role is not defined or unexpected
+          router.push("/"); 
+        }
+      } else {
+        // Should not happen if registration creates user doc, but handle defensively
+        toast({
+          title: "Login Failed",
+          description: "User profile not found. Please contact support.",
+          variant: "destructive",
+        });
+         await auth.signOut(); // Sign out user as profile is missing
+      }
     } catch (error: any) {
       console.error("Login error:", error);
       toast({

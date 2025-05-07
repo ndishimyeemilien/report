@@ -1,3 +1,4 @@
+
 "use client";
 import AdminHeader from "@/components/layout/AdminHeader";
 import AdminSidebar from "@/components/layout/AdminSidebar";
@@ -11,14 +12,20 @@ export default function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { currentUser, loading } = useAuth();
+  const { currentUser, userProfile, loading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (!loading && !currentUser) {
-      router.push("/login");
+    if (!loading) {
+      if (!currentUser) {
+        router.push("/login");
+      } else if (userProfile && userProfile.role !== 'Admin') {
+        // If logged in but not an Admin, redirect to login or an unauthorized page
+        // For simplicity, redirecting to login. A dedicated /unauthorized page would be better.
+        router.push("/login?error=unauthorized"); 
+      }
     }
-  }, [currentUser, loading, router]);
+  }, [currentUser, userProfile, loading, router]);
 
   if (loading) {
     return (
@@ -28,9 +35,10 @@ export default function AdminLayout({
     );
   }
 
-  if (!currentUser) {
-    // This case should ideally not be reached if useEffect redirects,
-    // but it's a fallback.
+  // Ensure user is an Admin before rendering the layout
+  if (!currentUser || !userProfile || userProfile.role !== 'Admin') {
+    // This fallback might be hit if useEffect hasn't redirected yet or for edge cases.
+    // Returning null prevents rendering the admin layout for non-admins.
     return null; 
   }
 

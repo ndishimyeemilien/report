@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Button } from "@/components/ui/button";
@@ -7,7 +8,7 @@ import type { Course } from "@/types";
 import { db } from "@/lib/firebase";
 import { collection, deleteDoc, doc, getDocs, query, orderBy, Timestamp } from "firebase/firestore";
 import { useEffect, useState } from "react";
-import { PlusCircle, Edit3, Trash2, BookOpen, Loader2, AlertTriangle } from "lucide-react";
+import { PlusCircle, Edit3, Trash2, BookOpen, Loader2, AlertTriangle, UserCheck } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -15,8 +16,6 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-  DialogFooter,
-  DialogClose
 } from "@/components/ui/dialog";
 import {
   AlertDialog,
@@ -27,10 +26,10 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/ui/badge";
 
 export default function CoursesPage() {
   const [courses, setCourses] = useState<Course[]>([]);
@@ -49,7 +48,7 @@ export default function CoursesPage() {
       const coursesData = querySnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
-        createdAt: (doc.data().createdAt as Timestamp)?.toDate(), // Convert Timestamp to Date
+        createdAt: (doc.data().createdAt as Timestamp)?.toDate(), 
         updatedAt: (doc.data().updatedAt as Timestamp)?.toDate(),
       })) as Course[];
       setCourses(coursesData);
@@ -80,7 +79,7 @@ export default function CoursesPage() {
     try {
       await deleteDoc(doc(db, "courses", courseId));
       toast({ title: "Course Deleted", description: `Course "${courseName}" has been deleted.` });
-      fetchCourses(); // Refresh list
+      fetchCourses(); 
     } catch (error: any) {
       console.error("Error deleting course: ", error);
       toast({ title: "Delete Failed", description: error.message || "Could not delete course.", variant: "destructive" });
@@ -114,7 +113,7 @@ export default function CoursesPage() {
               onClose={() => {
                 setIsFormOpen(false);
                 setEditingCourse(null);
-                fetchCourses(); // Refresh list after closing form
+                fetchCourses(); 
               }} 
             />
           </DialogContent>
@@ -162,7 +161,7 @@ export default function CoursesPage() {
             <CardDescription>A list of all available courses in the system.</CardDescription>
           </CardHeader>
           <CardContent>
-            <ScrollArea className="h-[calc(100vh-20rem)]"> {/* Adjust height as needed */}
+            <ScrollArea className="h-[calc(100vh-20rem)]">
               <div className="space-y-4">
                 {courses.map((course) => (
                   <Card key={course.id} className="hover:shadow-md transition-shadow">
@@ -173,6 +172,12 @@ export default function CoursesPage() {
                           <CardDescription className="pt-1 text-sm">
                             {course.description || "No description provided."}
                           </CardDescription>
+                           {course.teacherName && (
+                            <Badge variant="secondary" className="mt-2 text-xs">
+                              <UserCheck className="mr-1.5 h-3 w-3" />
+                              Teacher: {course.teacherName}
+                            </Badge>
+                          )}
                         </div>
                         <div className="flex items-center gap-2">
                           <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => handleEdit(course)}>

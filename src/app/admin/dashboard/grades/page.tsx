@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Button } from "@/components/ui/button";
@@ -7,7 +8,7 @@ import type { Grade } from "@/types";
 import { db } from "@/lib/firebase";
 import { collection, deleteDoc, doc, getDocs, query, orderBy, Timestamp } from "firebase/firestore";
 import { useEffect, useState } from "react";
-import { PlusCircle, Edit3, Trash2, ClipboardList, Loader2, AlertTriangle, Download } from "lucide-react";
+import { PlusCircle, Edit3, Trash2, ClipboardList, Loader2, AlertTriangle, Download, User } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -25,7 +26,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import {
   Table,
@@ -38,6 +38,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+
 
 // Basic CSV export function
 const exportToCSV = (grades: Grade[]) => {
@@ -45,15 +47,15 @@ const exportToCSV = (grades: Grade[]) => {
     alert("No grades to export.");
     return;
   }
-  const headers = ["Student Name", "Course Code", "Course Name", "Marks", "Status", "Remarks", "Date Recorded"];
+  const headers = ["Student Name", "Course Code", "Course Name", "Marks", "Status", "Remarks", "Entered By", "Date Recorded"];
   const rows = grades.map(grade => [
     grade.studentName,
-    // Assuming Course Code is part of Course Name or needs to be fetched if stored separately
     grade.courseName.split('(')[1]?.replace(')','').trim() || 'N/A', 
     grade.courseName.split('(')[0].trim(),
     grade.marks,
     grade.status,
     grade.remarks || "",
+    grade.enteredByTeacherEmail || "Admin/System",
     new Date(grade.createdAt).toLocaleDateString()
   ]);
 
@@ -119,7 +121,7 @@ export default function GradesPage() {
     try {
       await deleteDoc(doc(db, "grades", gradeId));
       toast({ title: "Grade Deleted", description: `Grade for ${studentName} in ${courseName} deleted.` });
-      fetchGrades(); // Refresh list
+      fetchGrades(); 
     } catch (error: any)
     {
       console.error("Error deleting grade: ", error);
@@ -127,15 +129,11 @@ export default function GradesPage() {
     }
   };
   
-  const formatDate = (date: Date | undefined) => {
-    if (!date) return 'N/A';
-    return new Date(date).toLocaleDateString();
-  };
-
   return (
+    <TooltipProvider>
     <div className="container mx-auto py-8">
       <div className="flex items-center justify-between mb-8">
-        <h1 className="text-3xl font-bold tracking-tight text-foreground">Manage Grades</h1>
+        <h1 className="text-3xl font-bold tracking-tight text-foreground">Manage Grades (Admin View)</h1>
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => exportToCSV(grades)} disabled={grades.length === 0 || isLoading}>
             <Download className="mr-2 h-5 w-5" /> Export as CSV
@@ -158,7 +156,7 @@ export default function GradesPage() {
                 onClose={() => {
                   setIsFormOpen(false);
                   setEditingGrade(null);
-                  fetchGrades(); // Refresh list after form close
+                  fetchGrades(); 
                 }} 
               />
             </DialogContent>
@@ -204,19 +202,20 @@ export default function GradesPage() {
         <Card>
           <CardHeader>
             <CardTitle>Grade Records</CardTitle>
-            <CardDescription>A list of all recorded student grades.</CardDescription>
+            <CardDescription>A list of all recorded student grades. Admins can edit any record.</CardDescription>
           </CardHeader>
           <CardContent>
-            <ScrollArea className="h-[calc(100vh-22rem)]"> {/* Adjust height as needed */}
+            <ScrollArea className="h-[calc(100vh-22rem)]"> 
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-[200px]">Student Name</TableHead>
+                    <TableHead className="w-[180px]">Student Name</TableHead>
                     <TableHead>Course</TableHead>
                     <TableHead className="text-center">Marks</TableHead>
                     <TableHead className="text-center">Status</TableHead>
                     <TableHead>Remarks</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                    <TableHead className="text-center w-[120px]">Entered By</TableHead>
+                    <TableHead className="text-right w-[100px]">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -231,7 +230,24 @@ export default function GradesPage() {
                           {grade.status}
                         </Badge>
                       </TableCell>
-                      <TableCell className="max-w-[200px] truncate" title={grade.remarks}>{grade.remarks || "-"}</TableCell>
+                      <TableCell className="max-w-[150px] truncate" title={grade.remarks || undefined}>{grade.remarks || "-"}</TableCell>
+                      <TableCell className="text-center">
+                        {grade.enteredByTeacherEmail ? (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                                <span className="truncate cursor-default">{grade.enteredByTeacherEmail.split('@')[0]}</span>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                <p>{grade.enteredByTeacherEmail}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        ) : (
+                          <Tooltip>
+                            <TooltipTrigger asChild><User className="h-4 w-4 mx-auto text-muted-foreground" /></TooltipTrigger>
+                            <TooltipContent><p>Admin/System Entry</p></TooltipContent>
+                          </Tooltip>
+                        )}
+                      </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
                           <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => handleEdit(grade)}>
@@ -271,5 +287,6 @@ export default function GradesPage() {
         </Card>
       )}
     </div>
+    </TooltipProvider>
   );
 }

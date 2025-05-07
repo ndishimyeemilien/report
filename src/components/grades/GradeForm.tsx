@@ -1,3 +1,4 @@
+
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -16,14 +17,15 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { db } from "@/lib/firebase";
+import { db, auth } from "@/lib/firebase"; // Import auth
 import type { Grade, Course } from "@/types";
+import { useAuth } from "@/context/AuthContext"; // Import useAuth
 import { addDoc, collection, doc, serverTimestamp, updateDoc, getDocs, query, orderBy } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 
-const PASS_MARK = 40; // Assuming 40 is the pass mark
+const PASS_MARK = 40;
 
 const gradeFormSchema = z.object({
   studentName: z.string().min(2, { message: "Student name must be at least 2 characters." }).max(100),
@@ -37,35 +39,45 @@ type GradeFormValues = z.infer<typeof gradeFormSchema>;
 interface GradeFormProps {
   initialData?: Grade | null;
   onClose?: () => void;
+  // If courses are pre-filtered for teachers, pass them directly
+  // Otherwise, the form fetches all courses (for Admin) or could be adapted
+  availableCourses?: Course[]; 
 }
 
-export function GradeForm({ initialData, onClose }: GradeFormProps) {
+export function GradeForm({ initialData, onClose, availableCourses }: GradeFormProps) {
   const { toast } = useToast();
   const router = useRouter();
+  const { currentUser, userProfile } = useAuth(); // Get current user
   const [isLoading, setIsLoading] = useState(false);
   const [courses, setCourses] = useState<Course[]>([]);
   const [isCoursesLoading, setIsCoursesLoading] = useState(true);
 
   useEffect(() => {
-    const fetchCourses = async () => {
-      setIsCoursesLoading(true);
-      try {
-        const q = query(collection(db, "courses"), orderBy("name"));
-        const querySnapshot = await getDocs(q);
-        const coursesData = querySnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data(),
-        })) as Course[];
-        setCourses(coursesData);
-      } catch (error) {
-        console.error("Error fetching courses for grade form: ", error);
-        toast({ title: "Error", description: "Could not load courses.", variant: "destructive" });
-      } finally {
-        setIsCoursesLoading(false);
-      }
-    };
-    fetchCourses();
-  }, [toast]);
+    if (availableCourses) {
+      setCourses(availableCourses);
+      setIsCoursesLoading(false);
+    } else {
+      // Admin or situation where all courses are needed
+      const fetchCourses = async () => {
+        setIsCoursesLoading(true);
+        try {
+          const q = query(collection(db, "courses"), orderBy("name"));
+          const querySnapshot = await getDocs(q);
+          const coursesData = querySnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data(),
+          })) as Course[];
+          setCourses(coursesData);
+        } catch (error) {
+          console.error("Error fetching courses for grade form: ", error);
+          toast({ title: "Error", description: "Could not load courses.", variant: "destructive" });
+        } finally {
+          setIsCoursesLoading(false);
+        }
+      };
+      fetchCourses();
+    }
+  }, [toast, availableCourses]);
 
   const form = useForm<GradeFormValues>({
     resolver: zodResolver(gradeFormSchema),
@@ -84,6 +96,12 @@ export function GradeForm({ initialData, onClose }: GradeFormProps) {
 
   const onSubmit = async (values: GradeFormValues) => {
     setIsLoading(true);
+    if (!currentUser || !userProfile) {
+        toast({ title: "Authentication Error", description: "You must be logged in to submit grades.", variant: "destructive" });
+        setIsLoading(false);
+        return;
+    }
+    
     const selectedCourse = courses.find(c => c.id === values.courseId);
     if (!selectedCourse) {
         toast({ title: "Error", description: "Selected course not found.", variant: "destructive" });
@@ -93,23 +111,25 @@ export function GradeForm({ initialData, onClose }: GradeFormProps) {
 
     const status: 'Pass' | 'Fail' = values.marks >= PASS_MARK ? 'Pass' : 'Fail';
 
+    const gradePayload: Partial<Grade> = {
+        ...values,
+        courseName: selectedCourse.name,
+        status,
+        updatedAt: serverTimestamp() as unknown as Date, // Firestore SDK handles this
+        enteredByTeacherId: userProfile.uid,
+        enteredByTeacherEmail: userProfile.email || undefined,
+    };
+
+
     try {
       if (initialData) {
         const gradeRef = doc(db, "grades", initialData.id);
-        await updateDoc(gradeRef, {
-          ...values,
-          courseName: selectedCourse.name, // Ensure courseName is updated if course changes
-          status,
-          updatedAt: serverTimestamp(),
-        });
+        await updateDoc(gradeRef, gradePayload);
         toast({ title: "Grade Updated", description: `Grade for ${values.studentName} in ${selectedCourse.name} updated.` });
       } else {
         await addDoc(collection(db, "grades"), {
-          ...values,
-          courseName: selectedCourse.name,
-          status,
+          ...gradePayload,
           createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
         });
         toast({ title: "Grade Added", description: `Grade for ${values.studentName} in ${selectedCourse.name} added.` });
       }

@@ -1,8 +1,9 @@
+
 "use client";
 
 import type { User } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
-import type { UserProfile } from '@/types';
+import type { UserProfile, UserRole } from '@/types';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import type { ReactNode } from 'react';
@@ -27,15 +28,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const unsubscribe = auth.onAuthStateChanged(async (user) => {
       setCurrentUser(user);
       if (user) {
-        // Fetch user profile from Firestore
         const userDocRef = doc(db, "users", user.uid);
         const userDocSnap = await getDoc(userDocRef);
         if (userDocSnap.exists()) {
-          setUserProfile(userDocSnap.data() as UserProfile);
+          const profileData = userDocSnap.data();
+          // Ensure role is set, default to 'Admin' if missing (e.g. for users created before role field)
+          // Ideally, role should always be set upon user creation.
+          setUserProfile({
+            ...profileData,
+            role: profileData.role || 'Admin', // Default to Admin if role is not set
+          } as UserProfile);
         } else {
-          // If profile doesn't exist (e.g. new registration), create a basic one
-          // This case should ideally be handled more robustly during registration
-          const newProfile: UserProfile = { uid: user.uid, email: user.email, role: 'Admin' };
+          // This case is for a new user, typically handled during registration.
+          // For Report-Manager Lite, registration creates Admins.
+          // If a user somehow authenticates without a profile, create a default Admin one.
+          const newProfile: UserProfile = { 
+            uid: user.uid, 
+            email: user.email, 
+            role: 'Admin' // New users from basic auth (not registration form) might hit this.
+                          // Registration form explicitly sets role.
+          };
           await setDoc(userDocRef, newProfile);
           setUserProfile(newProfile);
         }
@@ -53,7 +65,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     await auth.signOut();
     setCurrentUser(null);
     setUserProfile(null);
-    router.push('/login');
+    router.push('/login'); // Always redirect to login on logout
     setLoading(false);
   };
   

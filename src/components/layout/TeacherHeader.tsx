@@ -13,18 +13,17 @@ import {
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useAuth } from "@/context/AuthContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Menu, LogOut, Settings, Sun, Moon } from "lucide-react"; // Removed UserCircle as Avatar is used
+import { Menu, LogOut, UserCircle, Settings, Sun, Moon } from "lucide-react";
 import Link from "next/link";
 import Logo from "../shared/Logo";
-import AdminSidebarNav from "./AdminSidebarNav"; 
+import TeacherSidebarNav from "./TeacherSidebarNav"; // To be created
 import { useState, useEffect } from "react";
 
-// Simple theme toggle (no persistence for Lite version)
+// Simple theme toggle (can be shared or duplicated)
 const ThemeToggle = () => {
   const [isDarkMode, setIsDarkMode] = useState(false);
 
   useEffect(() => {
-    // Check for saved theme preference or system preference
     const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
     const savedTheme = typeof window !== 'undefined' ? localStorage.getItem('theme') : null;
     if (savedTheme) {
@@ -52,12 +51,11 @@ const ThemeToggle = () => {
   );
 };
 
-
-export default function AdminHeader() {
+export default function TeacherHeader() {
   const { currentUser, userProfile, logout } = useAuth();
 
   const getInitials = (email: string | null | undefined) => {
-    if (!email) return "AD";
+    if (!email) return "TC"; // Teacher initials
     return email.substring(0, 2).toUpperCase();
   };
 
@@ -75,13 +73,9 @@ export default function AdminHeader() {
              <div className="px-4 mb-4">
                 <Logo className="text-sidebar-foreground"/>
              </div>
-            <AdminSidebarNav isMobile={true} />
+            <TeacherSidebarNav isMobile={true} />
           </SheetContent>
         </Sheet>
-      </div>
-
-      <div className="hidden md:block">
-        {/* Placeholder for breadcrumbs or page title if needed */}
       </div>
       
       <div className="flex w-full items-center justify-end gap-4 md:ml-auto">
@@ -91,7 +85,7 @@ export default function AdminHeader() {
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-9 w-9 rounded-full">
                 <Avatar className="h-9 w-9">
-                  <AvatarImage src={currentUser.photoURL || ""} alt={userProfile.email || "Admin"} />
+                  <AvatarImage src={currentUser.photoURL || ""} alt={userProfile.email || "Teacher"} />
                   <AvatarFallback className="bg-primary text-primary-foreground">
                     {getInitials(userProfile.email)}
                   </AvatarFallback>
@@ -110,13 +104,14 @@ export default function AdminHeader() {
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <Link href="/admin/settings"> {/* Updated Link */}
+              {/* Teachers might have a simpler settings page or none */}
+              {/* <DropdownMenuItem asChild>
+                <Link href="/teacher/settings">
                   <Settings className="mr-2 h-4 w-4" />
                   <span>Settings</span>
                 </Link>
               </DropdownMenuItem>
-              <DropdownMenuSeparator />
+              <DropdownMenuSeparator /> */}
               <DropdownMenuItem onClick={logout}>
                 <LogOut className="mr-2 h-4 w-4" />
                 <span>Log out</span>
