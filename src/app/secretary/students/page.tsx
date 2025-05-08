@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { StudentForm } from "@/components/students/StudentForm";
 import type { Student } from "@/types";
 import { db } from "@/lib/firebase";
-import { collection, deleteDoc, doc, getDocs, query, orderBy, Timestamp, addDoc, serverTimestamp, where } from "firebase/firestore";
+import { collection, deleteDoc, doc, getDocs, query, orderBy, Timestamp, addDoc, serverTimestamp, where, type FieldValue } from "firebase/firestore"; // Added FieldValue
 import { useEffect, useState } from "react";
 import { PlusCircle, Edit3, Trash2, Users, Loader2, AlertTriangle, UploadCloud } from "lucide-react";
 import {
@@ -37,7 +37,7 @@ import {
 } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ExcelImportDialog } from "@/components/shared/ExcelImportDialog"; // Import the dialog
+import { ExcelImportDialog } from "@/components/shared/ExcelImportDialog";
 
 interface StudentExcelRow {
   fullName: string;
@@ -51,7 +51,7 @@ export default function SecretaryStudentsPage() {
   const [error, setError] = useState<string | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
-  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false); // State for import dialog
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const { toast } = useToast();
 
   const fetchStudents = async () => {
@@ -92,8 +92,6 @@ export default function SecretaryStudentsPage() {
 
   const handleDelete = async (studentId: string, studentName: string) => {
     try {
-      // Future: Check for enrollments and grades before deleting
-      // For Lite: Direct delete
       const enrollmentsQuery = query(collection(db, "enrollments"), where("studentId", "==", studentId));
       const enrollmentsSnapshot = await getDocs(enrollmentsQuery);
       if (!enrollmentsSnapshot.empty) {
@@ -131,16 +129,21 @@ export default function SecretaryStudentsPage() {
         continue;
       }
 
-      const studentData: Partial<Omit<Student, 'id'>> = {
+      // Define the type for data being written to Firestore, using FieldValue for timestamps
+      type StudentWriteData = Omit<Student, 'id' | 'createdAt' | 'updatedAt'> & {
+        createdAt: FieldValue;
+        updatedAt: FieldValue;
+      };
+
+      const studentData: StudentWriteData = {
         fullName: row.fullName.trim(),
         studentSystemId: row.studentSystemId?.trim() || undefined,
         email: row.email?.trim() || undefined,
-        createdAt: serverTimestamp() as unknown as Date,
-        updatedAt: serverTimestamp() as unknown as Date,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
       };
 
       try {
-        // Optional: Check for duplicates by studentSystemId if it's meant to be unique
         if (studentData.studentSystemId) {
             const q = query(collection(db, "students"), where("studentSystemId", "==", studentData.studentSystemId));
             const existingStudentSnap = await getDocs(q);
@@ -159,18 +162,17 @@ export default function SecretaryStudentsPage() {
       }
     }
 
-    fetchStudents(); // Refresh student list
+    fetchStudents();
     
     let message = `${successCount} student(s) imported successfully.`;
     if (failCount > 0) {
       message += ` ${failCount} student(s) failed to import.`;
       if (errors.length > 0) {
-        message += ` Errors: ${errors.slice(0, 3).join("; ")}${errors.length > 3 ? '...' : ''}`; // Show first few errors
+        message += ` Errors: ${errors.slice(0, 3).join("; ")}${errors.length > 3 ? '...' : ''}`;
       }
     }
     return { success: successCount > 0 || (successCount === 0 && failCount === 0), message };
   };
-
 
   return (
     <div className="container mx-auto py-8">
@@ -206,7 +208,7 @@ export default function SecretaryStudentsPage() {
         </div>
       </div>
 
-      <ExcelImportDialog&lt;StudentExcelRow&gt;
+      <ExcelImportDialog<StudentExcelRow>
         isOpen={isImportDialogOpen}
         onClose={() => setIsImportDialogOpen(false)}
         onImport={handleStudentImport}
@@ -214,7 +216,7 @@ export default function SecretaryStudentsPage() {
         templateFileName="students_template.xlsx"
         dialogTitle="Import Students from Excel"
         dialogDescription="Upload an Excel file (.xlsx or .xls) with student data. Ensure column headers match: fullName, studentSystemId (optional), email (optional)."
-      /&gt;
+      />
 
       {isLoading && (
         <div className="flex justify-center items-center h-64">
