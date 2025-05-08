@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { StudentForm } from "@/components/students/StudentForm";
 import type { Student } from "@/types";
 import { db } from "@/lib/firebase";
-import { collection, deleteDoc, doc, getDocs, query, orderBy, Timestamp, addDoc, serverTimestamp, where, type FieldValue } from "firebase/firestore"; // Added FieldValue
+import { collection, deleteDoc, doc, getDocs, query, orderBy, Timestamp, addDoc, serverTimestamp, where, type FieldValue } from "firebase/firestore"; 
 import { useEffect, useState } from "react";
 import { PlusCircle, Edit3, Trash2, Users, Loader2, AlertTriangle, UploadCloud } from "lucide-react";
 import {
@@ -130,30 +130,41 @@ export default function SecretaryStudentsPage() {
       }
 
       // Define the type for data being written to Firestore, using FieldValue for timestamps
-      type StudentWriteData = Omit<Student, 'id' | 'createdAt' | 'updatedAt'> & {
+      // Make studentSystemId and email optional in the type for dataForFirestore
+      type StudentFirestoreData = Partial<Omit<Student, 'id' | 'createdAt' | 'updatedAt'>> & {
+        fullName: string; // fullName is required
         createdAt: FieldValue;
         updatedAt: FieldValue;
       };
-
-      const studentData: StudentWriteData = {
+      
+      const dataForFirestore: StudentFirestoreData = {
         fullName: row.fullName.trim(),
-        studentSystemId: row.studentSystemId?.trim() || undefined,
-        email: row.email?.trim() || undefined,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       };
 
+      const studentIdTrimmed = row.studentSystemId?.trim();
+      if (studentIdTrimmed) { // Only add if non-empty string
+        dataForFirestore.studentSystemId = studentIdTrimmed;
+      }
+
+      const emailTrimmed = row.email?.trim();
+      if (emailTrimmed) { // Only add if non-empty string
+        dataForFirestore.email = emailTrimmed;
+      }
+
       try {
-        if (studentData.studentSystemId) {
-            const q = query(collection(db, "students"), where("studentSystemId", "==", studentData.studentSystemId));
+        // Check for duplicates using studentSystemId if it's provided
+        if (dataForFirestore.studentSystemId) {
+            const q = query(collection(db, "students"), where("studentSystemId", "==", dataForFirestore.studentSystemId));
             const existingStudentSnap = await getDocs(q);
             if (!existingStudentSnap.empty) {
                 failCount++;
-                errors.push(`Student with ID ${studentData.studentSystemId} (${studentData.fullName}) already exists. Skipped.`);
+                errors.push(`Student with ID ${dataForFirestore.studentSystemId} (${dataForFirestore.fullName}) already exists. Skipped.`);
                 continue;
             }
         }
-        await addDoc(collection(db, "students"), studentData);
+        await addDoc(collection(db, "students"), dataForFirestore);
         successCount++;
       } catch (e: any) {
         failCount++;
