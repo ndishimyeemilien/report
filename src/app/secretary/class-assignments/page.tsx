@@ -219,4 +219,10 @@ export default function SecretaryClassAssignmentsPage() {
                   ))}
                 </TableBody>
               </Table>
-            </Scroll
+            </ScrollArea>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}

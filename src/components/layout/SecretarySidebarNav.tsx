@@ -4,14 +4,16 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { LayoutDashboard, Users, BookOpen, UsersRound } from "lucide-react"; // UsersRound for enrollments
+import { LayoutDashboard, Users, BookOpen, UsersRound, Archive, Link2 } from "lucide-react"; // UsersRound for enrollments, Archive for Classes, Link2 for Class Assignments
 import type { NavItem } from "./AdminSidebarNav"; // Reuse NavItem type
 
 export const secretaryNavItems: NavItem[] = [
   { href: "/secretary/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/secretary/students", label: "Students", icon: Users },
+  { href: "/secretary/classes", label: "Classes", icon: Archive }, // New link for classes
   { href: "/secretary/courses", label: "Courses", icon: BookOpen },
-  { href: "/secretary/enrollments", label: "Enrollments", icon: UsersRound }, 
+  { href: "/secretary/class-assignments", label: "Class Assignments", icon: Link2 }, // New link for class-course assignments
+  { href: "/secretary/enrollments", label: "Student Enrollments", icon: UsersRound }, 
   // { href: "/secretary/settings", label: "Settings", icon: SettingsIcon }, // Optional
 ];
 
@@ -58,4 +60,3 @@ export default function SecretarySidebarNav({ isMobile = false }: SecretarySideb
     </nav>
   );
 }
-

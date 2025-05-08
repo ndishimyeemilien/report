@@ -145,7 +145,7 @@ export function EnrollmentForm({ onClose }: EnrollmentFormProps) {
       toast({ 
         title: "Enrollment Processed", 
         description: summaryMessage.trim() || "Enrollment attempt complete.",
-        variant: successfulEnrollments > 0 ? "default" : "destructive"
+        variant: successfulEnrollments > 0 ? "default" : (existingEnrollments > 0 && successfulEnrollments === 0 ? "default" : "destructive")
       });
       
       router.refresh(); 

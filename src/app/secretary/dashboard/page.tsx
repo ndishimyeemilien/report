@@ -1,5 +1,5 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, BookOpen, UsersRound, BarChart3 } from "lucide-react";
+import { Users, BookOpen, UsersRound, Archive, Link2 } from "lucide-react"; // Added Archive for classes, Link2 for assignments
 import Link from "next/link";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -9,10 +9,15 @@ async function getStats() {
     const studentsSnapshot = await getDocs(collection(db, "students"));
     const coursesSnapshot = await getDocs(collection(db, "courses"));
     const enrollmentsSnapshot = await getDocs(collection(db, "enrollments"));
+    const classesSnapshot = await getDocs(collection(db, "classes")); // Fetch classes
+    const classAssignmentsSnapshot = await getDocs(collection(db, "classAssignments")); // Fetch class assignments
+
     return {
       totalStudents: studentsSnapshot.size,
       totalCourses: coursesSnapshot.size,
       totalEnrollments: enrollmentsSnapshot.size,
+      totalClasses: classesSnapshot.size,
+      totalClassAssignments: classAssignmentsSnapshot.size,
       error: null,
     };
   } catch (error) {
@@ -21,18 +26,22 @@ async function getStats() {
       totalStudents: 0,
       totalCourses: 0,
       totalEnrollments: 0,
+      totalClasses: 0,
+      totalClassAssignments: 0,
       error: "Could not load statistics.",
     };
   }
 }
 
 export default async function SecretaryDashboardPage() {
-  const { totalStudents, totalCourses, totalEnrollments, error: statsError } = await getStats();
+  const { totalStudents, totalCourses, totalEnrollments, totalClasses, totalClassAssignments, error: statsError } = await getStats();
 
   const stats = [
     { title: "Total Students", value: totalStudents.toString(), icon: Users, href: "/secretary/students", iconColor: "text-purple-500" },
+    { title: "Manage Classes", value: totalClasses.toString() + " Created", icon: Archive, href: "/secretary/classes", iconColor: "text-orange-500" },
     { title: "Total Courses", value: totalCourses.toString(), icon: BookOpen, href: "/secretary/courses", iconColor: "text-blue-500" },
-    { title: "Manage Enrollments", value: totalEnrollments.toString() + " Active", icon: UsersRound, href: "/secretary/enrollments", iconColor: "text-green-500" },
+    { title: "Class Assignments", value: totalClassAssignments.toString() + " Active", icon: Link2, href: "/secretary/class-assignments", iconColor: "text-red-500" },
+    { title: "Student Enrollments", value: totalEnrollments.toString() + " Active", icon: UsersRound, href: "/secretary/enrollments", iconColor: "text-green-500" },
   ];
 
   return (
@@ -50,7 +59,7 @@ export default async function SecretaryDashboardPage() {
         </Card>
       )}
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5"> {/* Adjusted for 5 items */}
         {stats.map((stat) => (
            <Link href={stat.href} key={stat.title}>
             <Card className={`hover:shadow-lg transition-shadow duration-200`}>
@@ -72,14 +81,16 @@ export default async function SecretaryDashboardPage() {
           <CardHeader>
             <CardTitle>Welcome, Secretary!</CardTitle>
             <CardDescription>
-              Manage student records, courses, and class enrollments efficiently.
+              Manage student records, classes, courses, and enrollments efficiently.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
-                <li>Add and manage student information in the "Students" section.</li>
-                <li>Create and update course details under "Courses".</li>
-                <li>Assign students to their respective courses in "Enrollments".</li>
+                <li>Add and manage student information in "Students".</li>
+                <li>Create and organize "Classes".</li>
+                <li>Add and update course details under "Courses".</li>
+                <li>Assign courses to specific classes in "Class Assignments".</li>
+                <li>Enroll students into classes (which enrolls them in assigned courses) in "Student Enrollments".</li>
             </ul>
           </CardContent>
         </Card>
@@ -87,4 +98,3 @@ export default async function SecretaryDashboardPage() {
     </div>
   );
 }
-
