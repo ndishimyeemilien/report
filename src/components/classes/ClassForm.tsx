@@ -55,20 +55,30 @@ export function ClassForm({ initialData, onClose }: ClassFormProps) {
     
     const dataToSave: {
         name: string;
-        description?: string;
+        description?: string | null; // Allow null for Firestore
         updatedAt: FieldValue;
         createdAt?: FieldValue;
     } = {
         name: values.name,
-        description: values.description || undefined,
         updatedAt: serverTimestamp(),
     };
+
+    if (values.description && values.description.trim() !== "") {
+        dataToSave.description = values.description;
+    } else {
+        // If description is empty or only whitespace, store it as null or omit it.
+        // Storing as null explicitly sets it, omitting it leaves it undefined if not previously set.
+        // For updates, if you want to remove a description, you'd use deleteField().
+        // Here, we'll set to null if it's empty, for consistency.
+        dataToSave.description = null; 
+    }
+
 
     try {
       if (initialData) { 
         const classRef = doc(db, "classes", initialData.id);
-        const { createdAt, ...updatePayload } = dataToSave; // Ensure createdAt is not in update payload
-        await updateDoc(classRef, updatePayload);
+        // Ensure createdAt is not in update payload if it was part of dataToSave initially (it's not in this structure)
+        await updateDoc(classRef, dataToSave); // dataToSave already excludes createdAt for updates
         toast({ title: "Class Updated", description: `Class "${values.name}" has been successfully updated.` });
       } else { 
         dataToSave.createdAt = serverTimestamp();
@@ -137,3 +147,4 @@ export function ClassForm({ initialData, onClose }: ClassFormProps) {
     </Form>
   );
 }
+

@@ -75,64 +75,61 @@ export function CourseForm({ initialData, onClose }: CourseFormProps) {
       name: initialData.name,
       code: initialData.code,
       description: initialData.description || "",
-      teacherId: initialData.teacherId || "", // Handles case where teacherId might be undefined in initialData
+      teacherId: initialData.teacherId || "", 
     } : {
       name: "",
       code: "",
       description: "",
-      teacherId: "", // Default to empty string, representing "None" initially
+      teacherId: "", 
     },
   });
 
   const onSubmit = async (values: CourseFormValues) => {
     setIsLoading(true);
     
-    const dataToSave: {
+    // Base structure for Firestore document data
+    const dataForFirestore: {
         name: string;
         code: string;
-        description: string | null;
-        teacherId?: string;
-        teacherName?: string | null;
+        description?: string | null; // Allow null
+        teacherId?: string | FieldValue; // Allow FieldValue for deleteField
+        teacherName?: string | null | FieldValue; // Allow null and FieldValue
         updatedAt: FieldValue;
         createdAt?: FieldValue;
     } = {
         name: values.name,
         code: values.code,
-        description: values.description || null,
         updatedAt: serverTimestamp(),
     };
 
-    // values.teacherId is either a UID or "" (if "None" selected and mapped by the Select's onChange)
+    if (values.description && values.description.trim() !== "") {
+        dataForFirestore.description = values.description;
+    } else {
+        dataForFirestore.description = null; // Store empty description as null
+    }
+    
     if (values.teacherId && values.teacherId !== NONE_TEACHER_VALUE) {
         const selectedTeacher = teachers.find(t => t.uid === values.teacherId);
-        dataToSave.teacherId = values.teacherId;
-        dataToSave.teacherName = selectedTeacher?.email || null;
+        dataForFirestore.teacherId = values.teacherId;
+        dataForFirestore.teacherName = selectedTeacher?.email || null;
+    } else if (initialData) { // Only use deleteField for updates if unassigning
+        dataForFirestore.teacherId = deleteField();
+        dataForFirestore.teacherName = deleteField();
     }
-    // If values.teacherId is "" or NONE_TEACHER_VALUE, teacherId and teacherName remain undefined in dataToSave at this point
+    // For new documents, if teacherId is empty or NONE_TEACHER_VALUE, 
+    // teacherId and teacherName will not be added to dataForFirestore, which is correct.
+
 
     try {
-      if (initialData) { // This is an UPDATE operation
+      if (initialData) { 
         const courseRef = doc(db, "courses", initialData.id);
-        // Create a payload for update, explicitly excluding createdAt
-        const { createdAt, ...updatePayloadRest } = dataToSave;
-        const updatePayload: any = { ...updatePayloadRest };
-
-
-        if (!values.teacherId || values.teacherId === NONE_TEACHER_VALUE) { // If "None" was selected or teacherId is empty
-            updatePayload.teacherId = deleteField();
-            updatePayload.teacherName = deleteField();
-        } else {
-            // teacherId and teacherName are already set in dataToSave if a teacher was selected
-            // and will be part of updatePayloadRest
-        }
-        
-        await updateDoc(courseRef, updatePayload);
+        // The 'createdAt' field should not be part of the update payload.
+        // It's already handled by not including it in dataForFirestore for updates.
+        await updateDoc(courseRef, dataForFirestore);
         toast({ title: "Course Updated", description: `Course "${values.name}" has been successfully updated.` });
-      } else { // This is an ADD operation
-        dataToSave.createdAt = serverTimestamp();
-        // If values.teacherId is empty, teacherId and teacherName are not in dataToSave,
-        // so they are not written, which is correct for addDoc.
-        await addDoc(collection(db, "courses"), dataToSave);
+      } else { 
+        dataForFirestore.createdAt = serverTimestamp();
+        await addDoc(collection(db, "courses"), dataForFirestore);
         toast({ title: "Course Added", description: `Course "${values.name}" has been successfully added.` });
       }
       router.refresh(); 
@@ -204,10 +201,8 @@ export function CourseForm({ initialData, onClose }: CourseFormProps) {
               <FormLabel>Assign Teacher (Optional)</FormLabel>
               <Select 
                 onValueChange={(value) => {
-                  // field.onChange maps NONE_TEACHER_VALUE to empty string for the form state
                   field.onChange(value === NONE_TEACHER_VALUE ? "" : value);
                 }} 
-                // If field.value is empty string (meaning "None"), Select displays NONE_TEACHER_VALUE placeholder
                 value={!field.value ? NONE_TEACHER_VALUE : field.value} 
                 disabled={isTeachersLoading}
               >

@@ -41,7 +41,7 @@ import { ExcelImportDialog } from "@/components/shared/ExcelImportDialog";
 
 interface StudentExcelRow {
   fullName: string;
-  studentSystemId?: string;
+  studentSystemId?: string | number; // Can be string or number from Excel
   email?: string;
 }
 
@@ -123,38 +123,39 @@ export default function SecretaryStudentsPage() {
     const errors: string[] = [];
 
     for (const row of data) {
-      if (!row.fullName || row.fullName.trim() === "") {
+      const fullNameTrimmed = String(row.fullName ?? '').trim();
+      if (!fullNameTrimmed) {
         failCount++;
         errors.push("A student record was skipped due to missing full name.");
         continue;
       }
 
-      // Define the type for data being written to Firestore, using FieldValue for timestamps
-      // Make studentSystemId and email optional in the type for dataForFirestore
-      type StudentFirestoreData = Partial<Omit<Student, 'id' | 'createdAt' | 'updatedAt'>> & {
-        fullName: string; // fullName is required
+      type StudentFirestoreData = {
+        fullName: string;
+        studentSystemId?: string;
+        email?: string;
         createdAt: FieldValue;
         updatedAt: FieldValue;
       };
       
       const dataForFirestore: StudentFirestoreData = {
-        fullName: row.fullName.trim(),
+        fullName: fullNameTrimmed,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       };
 
-      const studentIdTrimmed = row.studentSystemId?.trim();
-      if (studentIdTrimmed) { // Only add if non-empty string
+      const studentIdTrimmed = String(row.studentSystemId ?? '').trim();
+      if (studentIdTrimmed) {
         dataForFirestore.studentSystemId = studentIdTrimmed;
       }
 
-      const emailTrimmed = row.email?.trim();
-      if (emailTrimmed) { // Only add if non-empty string
+      const emailTrimmed = String(row.email ?? '').trim();
+      if (emailTrimmed) { 
         dataForFirestore.email = emailTrimmed;
       }
 
       try {
-        // Check for duplicates using studentSystemId if it's provided
+        // Check for duplicates using studentSystemId if it's provided and not empty
         if (dataForFirestore.studentSystemId) {
             const q = query(collection(db, "students"), where("studentSystemId", "==", dataForFirestore.studentSystemId));
             const existingStudentSnap = await getDocs(q);
