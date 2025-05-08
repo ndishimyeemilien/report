@@ -51,3 +51,24 @@ export interface UserProfile {
   role: UserRole;
 }
 
+export interface Class {
+  id: string;
+  name: string; // e.g., "Grade 10A", "Form 3 Blue"
+  description?: string;
+  // teacherId?: string; // Optional: Homeroom teacher if applicable
+  // teacherName?: string; 
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface ClassCourseAssignment {
+  id: string; // Firebase document ID
+  classId: string;
+  className: string; // Denormalized
+  courseId: string;
+  courseName: string; // Denormalized (e.g. "Mathematics (MATH101)")
+  // Optional: teacherId specific to this class-course assignment if different from course default
+  // teacherId?: string; 
+  // teacherName?: string;
+  assignedAt: Date;
+}

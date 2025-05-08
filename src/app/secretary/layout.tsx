@@ -19,7 +19,6 @@ export default function SecretaryLayout({
       if (!currentUser) {
         router.push("/login");
       } else if (userProfile && userProfile.role !== 'Secretary' && userProfile.role !== 'Admin') { 
-        // Allow Admins to access secretary routes for oversight, or restrict if needed
         router.push("/login?error=unauthorized_secretary"); 
       }
     }
@@ -40,7 +39,7 @@ export default function SecretaryLayout({
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
       <SecretarySidebar />
-      <div className="flex flex-col sm:gap-4 sm:py-4 md:pl-64">
+      <div className="flex flex-col sm:gap-4 sm:py-4 md:pl-64"> {/* Adjusted padding for sidebar */}
         <SecretaryHeader />
         <main className="flex-1 gap-4 p-4 sm:px-6 sm:py-0 md:gap-8">
           {children}
@@ -49,4 +48,3 @@ export default function SecretaryLayout({
     </div>
   );
 }
-

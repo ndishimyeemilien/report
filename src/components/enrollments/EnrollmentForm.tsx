@@ -15,30 +15,31 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { db } from "@/lib/firebase";
-import type { Enrollment, Student, Course } from "@/types";
-import { addDoc, collection, serverTimestamp, query, where, getDocs, doc, updateDoc } from "firebase/firestore";
+import type { Enrollment, Student, Course, Class, ClassCourseAssignment } from "@/types";
+import { addDoc, collection, serverTimestamp, query, where, getDocs, orderBy } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 
 const enrollmentFormSchema = z.object({
   studentId: z.string().min(1, { message: "Please select a student." }),
-  courseId: z.string().min(1, { message: "Please select a course." }),
+  classId: z.string().min(1, { message: "Please select a class." }),
 });
 
 type EnrollmentFormValues = z.infer<typeof enrollmentFormSchema>;
 
 interface EnrollmentFormProps {
-  initialData?: Enrollment | null; // For editing, though Lite version might focus on add/delete
+  // initialData is removed as editing a "student-class" enrollment is complex
+  // and Lite version focuses on add/delete of student-course enrollments.
   onClose?: () => void;
 }
 
-export function EnrollmentForm({ initialData, onClose }: EnrollmentFormProps) {
+export function EnrollmentForm({ onClose }: EnrollmentFormProps) {
   const { toast } = useToast();
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [students, setStudents] = useState<Student[]>([]);
-  const [courses, setCourses] = useState<Course[]>([]);
+  const [classes, setClasses] = useState<Class[]>([]); // Changed from courses to classes
   const [isDataLoading, setIsDataLoading] = useState(true);
 
   useEffect(() => {
@@ -46,22 +47,22 @@ export function EnrollmentForm({ initialData, onClose }: EnrollmentFormProps) {
       setIsDataLoading(true);
       try {
         const studentsQuery = query(collection(db, "students"), orderBy("fullName", "asc"));
-        const coursesQuery = query(collection(db, "courses"), orderBy("name", "asc"));
+        const classesQuery = query(collection(db, "classes"), orderBy("name", "asc")); // Fetch classes
         
-        const [studentsSnapshot, coursesSnapshot] = await Promise.all([
+        const [studentsSnapshot, classesSnapshot] = await Promise.all([
           getDocs(studentsQuery),
-          getDocs(coursesQuery),
+          getDocs(classesQuery),
         ]);
 
         const studentsData = studentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Student));
-        const coursesData = coursesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Course));
+        const classesData = classesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Class)); // Map classes
         
         setStudents(studentsData);
-        setCourses(coursesData);
+        setClasses(classesData);
 
       } catch (error) {
-        console.error("Error fetching students/courses for enrollment: ", error);
-        toast({ title: "Error", description: "Could not load students or courses list.", variant: "destructive" });
+        console.error("Error fetching students/classes for enrollment: ", error);
+        toast({ title: "Error", description: "Could not load students or classes list.", variant: "destructive" });
       } finally {
         setIsDataLoading(false);
       }
@@ -71,81 +72,95 @@ export function EnrollmentForm({ initialData, onClose }: EnrollmentFormProps) {
 
   const form = useForm<EnrollmentFormValues>({
     resolver: zodResolver(enrollmentFormSchema),
-    defaultValues: initialData ? {
-      studentId: initialData.studentId,
-      courseId: initialData.courseId,
-    } : {
+    defaultValues: {
       studentId: "",
-      courseId: "",
+      classId: "",
     },
   });
 
   const onSubmit = async (values: EnrollmentFormValues) => {
     setIsLoading(true);
 
-    // Check for existing enrollment (studentId + courseId)
-    const existingEnrollmentQuery = query(
-      collection(db, "enrollments"),
-      where("studentId", "==", values.studentId),
-      where("courseId", "==", values.courseId)
-    );
-    const existingEnrollmentSnapshot = await getDocs(existingEnrollmentQuery);
-
-    if (!existingEnrollmentSnapshot.empty && !initialData) { // Only check for new enrollments
-        toast({
-            title: "Enrollment Exists",
-            description: "This student is already enrolled in this course.",
-            variant: "destructive"
-        });
-        setIsLoading(false);
-        return;
-    }
-
-
     const selectedStudent = students.find(s => s.id === values.studentId);
-    const selectedCourse = courses.find(c => c.id === values.courseId);
+    const selectedClass = classes.find(c => c.id === values.classId);
 
-    if (!selectedStudent || !selectedCourse) {
-        toast({ title: "Error", description: "Selected student or course not found.", variant: "destructive" });
+    if (!selectedStudent || !selectedClass) {
+        toast({ title: "Error", description: "Selected student or class not found.", variant: "destructive" });
         setIsLoading(false);
         return;
     }
-    
-    const enrollmentPayload: Partial<Omit<Enrollment, 'id'>> = {
-        studentId: values.studentId,
-        studentName: selectedStudent.fullName,
-        courseId: values.courseId,
-        courseName: `${selectedCourse.name} (${selectedCourse.code})`,
-    };
 
     try {
-      if (initialData) { // Editing existing enrollment
-        const enrollmentRef = doc(db, "enrollments", initialData.id);
-        // Note: Firestore serverTimestamp is only for add, for update you set it directly
-        await updateDoc(enrollmentRef, {
-            ...enrollmentPayload, 
-            // enrolledAt might not change, or you might want an `updatedAt` field
-        });
-        toast({ title: "Enrollment Updated", description: "Enrollment details have been updated." });
-      } else { // Adding new enrollment
-        await addDoc(collection(db, "enrollments"), {
-          ...enrollmentPayload,
-          enrolledAt: serverTimestamp(),
-        });
-        toast({ title: "Student Enrolled", description: `${selectedStudent.fullName} enrolled in ${selectedCourse.name}.` });
+      // Find all courses assigned to this class
+      const classAssignmentsQuery = query(collection(db, "classAssignments"), where("classId", "==", values.classId));
+      const classAssignmentsSnapshot = await getDocs(classAssignmentsQuery);
+      
+      if (classAssignmentsSnapshot.empty) {
+        toast({ title: "No Courses", description: `No courses are assigned to the class "${selectedClass.name}". Please assign courses first.`, variant: "default" });
+        setIsLoading(false);
+        return;
       }
+
+      const coursesToEnroll = classAssignmentsSnapshot.docs.map(doc => doc.data() as ClassCourseAssignment);
+      let successfulEnrollments = 0;
+      let existingEnrollments = 0;
+
+      for (const assignment of coursesToEnroll) {
+        // Check for existing enrollment (studentId + courseId)
+        const existingEnrollmentQuery = query(
+          collection(db, "enrollments"),
+          where("studentId", "==", values.studentId),
+          where("courseId", "==", assignment.courseId)
+        );
+        const existingEnrollmentSnapshot = await getDocs(existingEnrollmentQuery);
+
+        if (existingEnrollmentSnapshot.empty) {
+          const enrollmentPayload: Partial<Omit<Enrollment, 'id'>> = {
+              studentId: values.studentId,
+              studentName: selectedStudent.fullName,
+              courseId: assignment.courseId,
+              courseName: assignment.courseName, // Already stored in ClassCourseAssignment
+              enrolledAt: serverTimestamp() as unknown as Date,
+          };
+          await addDoc(collection(db, "enrollments"), enrollmentPayload);
+          successfulEnrollments++;
+        } else {
+          existingEnrollments++;
+        }
+      }
+      
+      let summaryMessage = "";
+      if (successfulEnrollments > 0) {
+        summaryMessage += `${selectedStudent.fullName} enrolled in ${successfulEnrollments} new course(s) from class ${selectedClass.name}. `;
+      }
+      if (existingEnrollments > 0) {
+        summaryMessage += `${existingEnrollments} course enrollment(s) already existed.`;
+      }
+      if (successfulEnrollments === 0 && existingEnrollments === 0 && coursesToEnroll.length > 0) {
+         summaryMessage = "No new enrollments made (all might have existed or an issue occurred).";
+      } else if (coursesToEnroll.length === 0) {
+         summaryMessage = `No courses are assigned to class ${selectedClass.name} to enroll the student into.`;
+      }
+
+      toast({ 
+        title: "Enrollment Processed", 
+        description: summaryMessage.trim() || "Enrollment attempt complete.",
+        variant: successfulEnrollments > 0 ? "default" : "destructive"
+      });
+      
       router.refresh(); 
       if (onClose) onClose(); 
+
     } catch (error: any) {
       console.error("Enrollment form error:", error);
       toast({
-        title: initialData ? "Update Failed" : "Enrollment Failed",
+        title: "Enrollment Failed",
         description: error.message || "An unexpected error occurred.",
         variant: "destructive",
       });
     } finally {
       setIsLoading(false);
-      if (!initialData) form.reset(); 
+      form.reset(); 
     }
   };
 
@@ -161,7 +176,7 @@ export function EnrollmentForm({ initialData, onClose }: EnrollmentFormProps) {
               <Select 
                 onValueChange={field.onChange} 
                 defaultValue={field.value} 
-                disabled={isDataLoading || !!initialData} // Disable if editing (usually student/course don't change in edit)
+                disabled={isDataLoading} 
               >
                 <FormControl>
                   <SelectTrigger>
@@ -170,7 +185,7 @@ export function EnrollmentForm({ initialData, onClose }: EnrollmentFormProps) {
                 </FormControl>
                 <SelectContent>
                   {isDataLoading ? (
-                    <SelectItem value="loading" disabled>Loading...</SelectItem>
+                    <SelectItem value="loading-students" disabled>Loading...</SelectItem>
                   ) : students.length === 0 ? (
                      <SelectItem value="no-students" disabled>No students available.</SelectItem>
                   ) : (
@@ -188,29 +203,29 @@ export function EnrollmentForm({ initialData, onClose }: EnrollmentFormProps) {
         />
         <FormField
           control={form.control}
-          name="courseId"
+          name="classId" // Changed from courseId to classId
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Course</FormLabel>
+              <FormLabel>Class</FormLabel> {/* Changed label */}
               <Select 
                 onValueChange={field.onChange} 
                 defaultValue={field.value} 
-                disabled={isDataLoading || !!initialData} // Disable if editing
+                disabled={isDataLoading} 
               >
                 <FormControl>
                   <SelectTrigger>
-                    <SelectValue placeholder={isDataLoading ? "Loading courses..." : "Select a course"} />
+                    <SelectValue placeholder={isDataLoading ? "Loading classes..." : "Select a class"} />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
                   {isDataLoading ? (
-                    <SelectItem value="loading" disabled>Loading...</SelectItem>
-                  ) : courses.length === 0 ? (
-                     <SelectItem value="no-courses" disabled>No courses available.</SelectItem>
+                    <SelectItem value="loading-classes" disabled>Loading...</SelectItem>
+                  ) : classes.length === 0 ? (
+                     <SelectItem value="no-classes" disabled>No classes available.</SelectItem>
                   ) : (
-                    courses.map(course => (
-                      <SelectItem key={course.id} value={course.id}>
-                        {course.name} ({course.code})
+                    classes.map(cls => ( // Changed from course to cls
+                      <SelectItem key={cls.id} value={cls.id}>
+                        {cls.name}
                       </SelectItem>
                     ))
                   )}
@@ -229,15 +244,14 @@ export function EnrollmentForm({ initialData, onClose }: EnrollmentFormProps) {
           )}
           <Button 
             type="submit" 
-            disabled={isLoading || isDataLoading || (students.length === 0 && courses.length === 0 && !isDataLoading)} 
+            disabled={isLoading || isDataLoading || (students.length === 0 && classes.length === 0 && !isDataLoading)} 
             className="bg-accent hover:bg-accent/90"
           >
             {(isLoading || isDataLoading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {initialData ? "Update Enrollment" : "Enroll Student"}
+            Enroll Student in Class
           </Button>
         </div>
       </form>
     </Form>
   );
 }
-

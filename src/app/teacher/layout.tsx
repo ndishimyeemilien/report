@@ -1,4 +1,3 @@
-
 "use client";
 import TeacherHeader from "@/components/layout/TeacherHeader"; 
 import TeacherSidebar from "@/components/layout/TeacherSidebar"; 
@@ -20,7 +19,6 @@ export default function TeacherLayout({
       if (!currentUser) {
         router.push("/login");
       } else if (userProfile && userProfile.role !== 'Teacher' && userProfile.role !== 'Admin') { 
-        // Allow Admins to access teacher routes for oversight, or restrict if needed
         router.push("/login?error=unauthorized_teacher"); 
       }
     }
@@ -41,7 +39,7 @@ export default function TeacherLayout({
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
       <TeacherSidebar />
-      <div className="flex flex-col sm:gap-4 sm:py-4 md:pl-64">
+      <div className="flex flex-col sm:gap-4 sm:py-4 md:pl-64"> {/* Adjusted padding for sidebar */}
         <TeacherHeader />
         <main className="flex-1 gap-4 p-4 sm:px-6 sm:py-0 md:gap-8">
           {children}

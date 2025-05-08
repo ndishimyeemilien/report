@@ -5,9 +5,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { StudentForm } from "@/components/students/StudentForm";
 import type { Student } from "@/types";
 import { db } from "@/lib/firebase";
-import { collection, deleteDoc, doc, getDocs, query, orderBy, Timestamp } from "firebase/firestore";
+import { collection, deleteDoc, doc, getDocs, query, orderBy, Timestamp, addDoc, serverTimestamp, where } from "firebase/firestore";
 import { useEffect, useState } from "react";
-import { PlusCircle, Edit3, Trash2, Users, Loader2, AlertTriangle } from "lucide-react";
+import { PlusCircle, Edit3, Trash2, Users, Loader2, AlertTriangle, UploadCloud } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -37,6 +37,13 @@ import {
 } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { ExcelImportDialog } from "@/components/shared/ExcelImportDialog"; // Import the dialog
+
+interface StudentExcelRow {
+  fullName: string;
+  studentSystemId?: string;
+  email?: string;
+}
 
 export default function SecretaryStudentsPage() {
   const [students, setStudents] = useState<Student[]>([]);
@@ -44,6 +51,7 @@ export default function SecretaryStudentsPage() {
   const [error, setError] = useState<string | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false); // State for import dialog
   const { toast } = useToast();
 
   const fetchStudents = async () => {
@@ -83,9 +91,20 @@ export default function SecretaryStudentsPage() {
   };
 
   const handleDelete = async (studentId: string, studentName: string) => {
-    // Consider implications: delete enrollments? grades?
-    // For now, simple delete. In a full app, this would need careful handling or soft deletes.
     try {
+      // Future: Check for enrollments and grades before deleting
+      // For Lite: Direct delete
+      const enrollmentsQuery = query(collection(db, "enrollments"), where("studentId", "==", studentId));
+      const enrollmentsSnapshot = await getDocs(enrollmentsQuery);
+      if (!enrollmentsSnapshot.empty) {
+        toast({
+          title: "Deletion Blocked",
+          description: `Student "${studentName}" has existing enrollments. Please remove enrollments first.`,
+          variant: "destructive",
+        });
+        return;
+      }
+      
       await deleteDoc(doc(db, "students", studentId));
       toast({ title: "Student Deleted", description: `Student "${studentName}" has been deleted.` });
       fetchStudents(); 
@@ -100,34 +119,102 @@ export default function SecretaryStudentsPage() {
     return new Date(date).toLocaleDateString();
   };
 
+  const handleStudentImport = async (data: StudentExcelRow[]): Promise<{ success: boolean; message: string }> => {
+    let successCount = 0;
+    let failCount = 0;
+    const errors: string[] = [];
+
+    for (const row of data) {
+      if (!row.fullName || row.fullName.trim() === "") {
+        failCount++;
+        errors.push("A student record was skipped due to missing full name.");
+        continue;
+      }
+
+      const studentData: Partial<Omit<Student, 'id'>> = {
+        fullName: row.fullName.trim(),
+        studentSystemId: row.studentSystemId?.trim() || undefined,
+        email: row.email?.trim() || undefined,
+        createdAt: serverTimestamp() as unknown as Date,
+        updatedAt: serverTimestamp() as unknown as Date,
+      };
+
+      try {
+        // Optional: Check for duplicates by studentSystemId if it's meant to be unique
+        if (studentData.studentSystemId) {
+            const q = query(collection(db, "students"), where("studentSystemId", "==", studentData.studentSystemId));
+            const existingStudentSnap = await getDocs(q);
+            if (!existingStudentSnap.empty) {
+                failCount++;
+                errors.push(`Student with ID ${studentData.studentSystemId} (${studentData.fullName}) already exists. Skipped.`);
+                continue;
+            }
+        }
+        await addDoc(collection(db, "students"), studentData);
+        successCount++;
+      } catch (e: any) {
+        failCount++;
+        errors.push(`Error importing ${row.fullName}: ${e.message}`);
+        console.error("Error importing student row: ", e);
+      }
+    }
+
+    fetchStudents(); // Refresh student list
+    
+    let message = `${successCount} student(s) imported successfully.`;
+    if (failCount > 0) {
+      message += ` ${failCount} student(s) failed to import.`;
+      if (errors.length > 0) {
+        message += ` Errors: ${errors.slice(0, 3).join("; ")}${errors.length > 3 ? '...' : ''}`; // Show first few errors
+      }
+    }
+    return { success: successCount > 0 || (successCount === 0 && failCount === 0), message };
+  };
+
+
   return (
     <div className="container mx-auto py-8">
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-8 flex-wrap gap-2">
         <h1 className="text-3xl font-bold tracking-tight text-foreground">Manage Students</h1>
-        <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={handleAddNew} className="bg-accent hover:bg-accent/90">
-              <PlusCircle className="mr-2 h-5 w-5" /> Add New Student
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-lg bg-card">
-            <DialogHeader>
-              <DialogTitle className="text-xl">{editingStudent ? "Edit Student" : "Add New Student"}</DialogTitle>
-              <DialogDescription>
-                {editingStudent ? "Update the student's details." : "Fill in the details to add a new student."}
-              </DialogDescription>
-            </DialogHeader>
-            <StudentForm 
-              initialData={editingStudent} 
-              onClose={() => {
-                setIsFormOpen(false);
-                setEditingStudent(null);
-                fetchStudents(); 
-              }} 
-            />
-          </DialogContent>
-        </Dialog>
+        <div className="flex gap-2">
+          <Button onClick={() => setIsImportDialogOpen(true)} variant="outline">
+            <UploadCloud className="mr-2 h-5 w-5" /> Import Students
+          </Button>
+          <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+            <DialogTrigger asChild>
+              <Button onClick={handleAddNew} className="bg-accent hover:bg-accent/90">
+                <PlusCircle className="mr-2 h-5 w-5" /> Add New Student
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-lg bg-card">
+              <DialogHeader>
+                <DialogTitle className="text-xl">{editingStudent ? "Edit Student" : "Add New Student"}</DialogTitle>
+                <DialogDescription>
+                  {editingStudent ? "Update the student's details." : "Fill in the details to add a new student."}
+                </DialogDescription>
+              </DialogHeader>
+              <StudentForm 
+                initialData={editingStudent} 
+                onClose={() => {
+                  setIsFormOpen(false);
+                  setEditingStudent(null);
+                  fetchStudents(); 
+                }} 
+              />
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
+
+      <ExcelImportDialog&lt;StudentExcelRow&gt;
+        isOpen={isImportDialogOpen}
+        onClose={() => setIsImportDialogOpen(false)}
+        onImport={handleStudentImport}
+        templateHeaders={["fullName", "studentSystemId", "email"]}
+        templateFileName="students_template.xlsx"
+        dialogTitle="Import Students from Excel"
+        dialogDescription="Upload an Excel file (.xlsx or .xls) with student data. Ensure column headers match: fullName, studentSystemId (optional), email (optional)."
+      /&gt;
 
       {isLoading && (
         <div className="flex justify-center items-center h-64">
@@ -157,7 +244,7 @@ export default function SecretaryStudentsPage() {
             </div>
             <CardTitle className="mt-4 text-2xl">No Students Found</CardTitle>
             <CardDescription>
-              Get started by adding your first student. Click the "Add New Student" button.
+              Get started by adding your first student or importing from Excel.
             </CardDescription>
           </CardHeader>
         </Card>
@@ -170,7 +257,7 @@ export default function SecretaryStudentsPage() {
             <CardDescription>A list of all registered students.</CardDescription>
           </CardHeader>
           <CardContent>
-            <ScrollArea className="h-[calc(100vh-20rem)]">
+            <ScrollArea className="h-[calc(100vh-22rem)]">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -230,4 +317,3 @@ export default function SecretaryStudentsPage() {
     </div>
   );
 }
-
