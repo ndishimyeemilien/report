@@ -15,6 +15,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogTrigger, // Added DialogTrigger
 } from "@/components/ui/dialog";
 import {
   AlertDialog,
@@ -25,7 +26,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
+  AlertDialogTrigger as AlertDialogTriggerComponent, // Renamed to avoid conflict
 } from "@/components/ui/alert-dialog";
 import {
   Select,
@@ -289,12 +290,12 @@ export default function CoursesPage() {
                             <span className="sr-only">Edit</span>
                           </Button>
                           <AlertDialog>
-                            <AlertDialogTrigger asChild>
+                            <AlertDialogTriggerComponent asChild>
                               <Button variant="destructive" size="icon" className="h-8 w-8">
                                 <Trash2 className="h-4 w-4" />
                                 <span className="sr-only">Delete</span>
                               </Button>
-                            </AlertDialogTrigger>
+                            </AlertDialogTriggerComponent>
                             <AlertDialogContent>
                               <AlertDialogHeader>
                                 <AlertDialogTitle>Are you sure?</AlertDialogTitle>
