@@ -1,4 +1,3 @@
-
 "use client";
 
 import { Button } from "@/components/ui/button";
@@ -9,14 +8,13 @@ import { db } from "@/lib/firebase";
 import { collection, deleteDoc, doc, getDocs, query, orderBy, Timestamp, where } from "firebase/firestore";
 import { useEffect, useState, useMemo } from "react";
 import { PlusCircle, Edit3, Trash2, BookOpen, Loader2, AlertTriangle, UserCheck, Filter } from "lucide-react";
-import { Label as FormLabel } from "@/components/ui/label"; // Added import for FormLabel
+import { Label as FormLabel } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   AlertDialog,
@@ -63,7 +61,7 @@ export default function CoursesPage() {
   // Filtered courses (subjects) based on selections
   const filteredCourses = useMemo(() => {
     if (!selectedCategory || !selectedCombination) {
-      return []; // Or return allCourses if no filter means show all (but that might be too much)
+      return []; 
     }
     return allCourses.filter(
       course => course.category === selectedCategory && course.combination === selectedCombination
@@ -75,7 +73,6 @@ export default function CoursesPage() {
     setIsLoading(true);
     setError(null);
     try {
-      // Fetch all courses (subjects) initially, then filter client-side or refine query if needed
       const q = query(collection(db, "courses"), orderBy("category"), orderBy("combination"), orderBy("name"));
       const querySnapshot = await getDocs(q);
       const coursesData = querySnapshot.docs.map(doc => ({
@@ -183,7 +180,9 @@ export default function CoursesPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="" disabled>-- Select Category --</SelectItem>
-                {predefinedCategories.map(cat => (
+                {predefinedCategories
+                  .filter(cat => cat !== "") 
+                  .map(cat => (
                   <SelectItem key={cat} value={cat}>{cat}</SelectItem>
                 ))}
               </SelectContent>
@@ -197,7 +196,9 @@ export default function CoursesPage() {
               </SelectTrigger>
               <SelectContent>
                  <SelectItem value="" disabled>-- Select Combination --</SelectItem>
-                {combinationsForSelectedCategory.map(combo => (
+                {combinationsForSelectedCategory
+                  .filter(combo => combo !== "")
+                  .map(combo => (
                   <SelectItem key={combo} value={combo}>{combo}</SelectItem>
                 ))}
               </SelectContent>
