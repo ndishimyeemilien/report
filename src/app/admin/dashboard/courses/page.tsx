@@ -8,14 +8,14 @@ import { db } from "@/lib/firebase";
 import { collection, deleteDoc, doc, getDocs, query, orderBy, Timestamp, where } from "firebase/firestore";
 import { useEffect, useState, useMemo } from "react";
 import { PlusCircle, Edit3, Trash2, BookOpen, Loader2, AlertTriangle, UserCheck, Filter } from "lucide-react";
-import { Label as FormLabel } from "@/components/ui/label";
+import { Label as FormLabel } from "@/components/ui/label"; // Renamed to avoid conflict with FormLabel from react-hook-form if used elsewhere
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger, // Added DialogTrigger
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   AlertDialog,
@@ -26,7 +26,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger as AlertDialogTriggerComponent, // Renamed to avoid conflict
+  AlertDialogTrigger as AlertDialogTriggerComponent, 
 } from "@/components/ui/alert-dialog";
 import {
   Select,
@@ -180,7 +180,6 @@ export default function CoursesPage() {
                 <SelectValue placeholder="-- Select Category --" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="" disabled>-- Select Category --</SelectItem>
                 {predefinedCategories
                   .filter(cat => cat !== "") 
                   .map(cat => (
@@ -196,7 +195,6 @@ export default function CoursesPage() {
                 <SelectValue placeholder={!selectedCategory ? "Select category first" : (combinationsForSelectedCategory.length === 0 ? "No combinations in category" : "-- Select Combination --")} />
               </SelectTrigger>
               <SelectContent>
-                 <SelectItem value="" disabled>-- Select Combination --</SelectItem>
                 {combinationsForSelectedCategory
                   .filter(combo => combo !== "")
                   .map(combo => (
