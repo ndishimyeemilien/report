@@ -25,23 +25,30 @@ import { useState, useEffect } from "react";
 import { Loader2 } from "lucide-react";
 
 const courseFormSchema = z.object({
-  name: z.string().min(3, { message: "Course name must be at least 3 characters." }).max(100),
-  code: z.string().min(2, { message: "Course code must be at least 2 characters." }).max(20)
-    .regex(/^[A-Z0-9\s-]+$/, "Course code can only contain uppercase letters, numbers, spaces, and hyphens."),
+  name: z.string().min(2, { message: "Subject name must be at least 2 characters." }).max(100), // Changed from Course name to Subject name
+  code: z.string().min(2, { message: "Subject code must be at least 2 characters." }).max(20)
+    .regex(/^[A-Z0-9\s-]+$/, "Subject code can only contain uppercase letters, numbers, spaces, and hyphens."),
   description: z.string().max(500).optional(),
-  teacherId: z.string().optional(), // Teacher's UID
+  teacherId: z.string().optional(),
+  // Category and Combination will be passed via initialData or props, not directly editable in this form
+  // but are required for saving.
+  category: z.string().min(1, "Category is required."),
+  combination: z.string().min(1, "Combination is required."),
 });
 
 type CourseFormValues = z.infer<typeof courseFormSchema>;
 
 interface CourseFormProps {
-  initialData?: Course | null;
+  initialData?: Partial<Course> | null; // Can be partial for new courses if category/combo passed
   onClose?: () => void;
+  // Selected category and combination must be provided if not in initialData (e.g. for new subject)
+  selectedCategory?: string;
+  selectedCombination?: string;
 }
 
-const NONE_TEACHER_VALUE = "_NONE_"; // Special value for "None" option
+const NONE_TEACHER_VALUE = "_NONE_"; 
 
-export function CourseForm({ initialData, onClose }: CourseFormProps) {
+export function CourseForm({ initialData, onClose, selectedCategory, selectedCombination }: CourseFormProps) {
   const { toast } = useToast();
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
@@ -69,95 +76,134 @@ export function CourseForm({ initialData, onClose }: CourseFormProps) {
     fetchTeachers();
   }, [toast]);
 
+  const defaultCategory = initialData?.category || selectedCategory || "";
+  const defaultCombination = initialData?.combination || selectedCombination || "";
+
   const form = useForm<CourseFormValues>({
     resolver: zodResolver(courseFormSchema),
-    defaultValues: initialData ? {
-      name: initialData.name,
-      code: initialData.code,
-      description: initialData.description || "",
-      teacherId: initialData.teacherId || "", 
-    } : {
-      name: "",
-      code: "",
-      description: "",
-      teacherId: "", 
+    defaultValues: {
+      name: initialData?.name || "",
+      code: initialData?.code || "",
+      description: initialData?.description || "",
+      teacherId: initialData?.teacherId || "",
+      category: defaultCategory,
+      combination: defaultCombination,
     },
   });
+  
+  // Watch category and combination to ensure they are part of the form's values if passed as props
+  useEffect(() => {
+    if (selectedCategory && form.getValues("category") !== selectedCategory) {
+      form.setValue("category", selectedCategory);
+    }
+    if (selectedCombination && form.getValues("combination") !== selectedCombination) {
+      form.setValue("combination", selectedCombination);
+    }
+  }, [selectedCategory, selectedCombination, form]);
+
 
   const onSubmit = async (values: CourseFormValues) => {
     setIsLoading(true);
     
-    // Base structure for Firestore document data
+    if (!values.category || !values.combination) {
+        toast({title: "Missing Info", description: "Category and Combination are required.", variant: "destructive"});
+        setIsLoading(false);
+        return;
+    }
+
     const dataForFirestore: {
         name: string;
         code: string;
-        description?: string | null; // Allow null
-        teacherId?: string | FieldValue; // Allow FieldValue for deleteField
-        teacherName?: string | null | FieldValue; // Allow null and FieldValue
+        description?: string | null;
+        teacherId?: string | FieldValue; 
+        teacherName?: string | null | FieldValue; 
+        category: string;
+        combination: string;
         updatedAt: FieldValue;
         createdAt?: FieldValue;
     } = {
         name: values.name,
         code: values.code,
+        category: values.category,
+        combination: values.combination,
         updatedAt: serverTimestamp(),
     };
 
     if (values.description && values.description.trim() !== "") {
         dataForFirestore.description = values.description;
     } else {
-        dataForFirestore.description = null; // Store empty description as null
+        dataForFirestore.description = null; 
     }
     
     if (values.teacherId && values.teacherId !== NONE_TEACHER_VALUE) {
         const selectedTeacher = teachers.find(t => t.uid === values.teacherId);
         dataForFirestore.teacherId = values.teacherId;
         dataForFirestore.teacherName = selectedTeacher?.email || null;
-    } else if (initialData) { // Only use deleteField for updates if unassigning
+    } else if (initialData?.id) { 
         dataForFirestore.teacherId = deleteField();
         dataForFirestore.teacherName = deleteField();
     }
-    // For new documents, if teacherId is empty or NONE_TEACHER_VALUE, 
-    // teacherId and teacherName will not be added to dataForFirestore, which is correct.
 
 
     try {
-      if (initialData) { 
+      if (initialData?.id) { 
         const courseRef = doc(db, "courses", initialData.id);
-        // The 'createdAt' field should not be part of the update payload.
-        // It's already handled by not including it in dataForFirestore for updates.
         await updateDoc(courseRef, dataForFirestore);
-        toast({ title: "Course Updated", description: `Course "${values.name}" has been successfully updated.` });
+        toast({ title: "Subject Updated", description: `Subject "${values.name}" has been successfully updated.` });
       } else { 
         dataForFirestore.createdAt = serverTimestamp();
         await addDoc(collection(db, "courses"), dataForFirestore);
-        toast({ title: "Course Added", description: `Course "${values.name}" has been successfully added.` });
+        toast({ title: "Subject Added", description: `Subject "${values.name}" has been successfully added to ${values.combination}.` });
       }
       router.refresh(); 
       if (onClose) onClose(); 
     } catch (error: any) {
       console.error("Course form error:", error);
       toast({
-        title: initialData ? "Update Failed" : "Add Failed",
+        title: initialData?.id ? "Update Failed" : "Add Failed",
         description: error.message || "An unexpected error occurred.",
         variant: "destructive",
       });
     } finally {
       setIsLoading(false);
-      if (!initialData) form.reset(); 
+      if (!initialData?.id) form.reset({
+        name: "",
+        code: "",
+        description: "",
+        teacherId: "",
+        category: selectedCategory || "", // Persist selected category/combo for next "add"
+        combination: selectedCombination || ""
+      }); 
     }
   };
 
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        
+        {/* Category and Combination are usually not directly edited in this form when adding subject to a selection */}
+        {/* They are displayed if editing, or implicitly set if adding */}
+        {initialData?.category && (
+            <div className="space-y-1">
+                <FormLabel>Category</FormLabel>
+                <Input value={initialData.category} readOnly disabled className="bg-muted/50"/>
+            </div>
+        )}
+         {initialData?.combination && (
+            <div className="space-y-1">
+                <FormLabel>Combination / Option</FormLabel>
+                <Input value={initialData.combination} readOnly disabled className="bg-muted/50"/>
+            </div>
+        )}
+
         <FormField
           control={form.control}
           name="name"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Course Name</FormLabel>
+              <FormLabel>Subject Name</FormLabel>
               <FormControl>
-                <Input placeholder="e.g., Introduction to Programming" {...field} />
+                <Input placeholder="e.g., Mathematics, Financial Accounting" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -168,9 +214,9 @@ export function CourseForm({ initialData, onClose }: CourseFormProps) {
           name="code"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Course Code</FormLabel>
+              <FormLabel>Subject Code</FormLabel>
               <FormControl>
-                <Input placeholder="e.g., CS101" {...field} />
+                <Input placeholder="e.g., MATH101, ACC202" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -184,7 +230,7 @@ export function CourseForm({ initialData, onClose }: CourseFormProps) {
               <FormLabel>Description (Optional)</FormLabel>
               <FormControl>
                 <Textarea
-                  placeholder="Briefly describe the course content and objectives."
+                  placeholder="Briefly describe the subject."
                   className="resize-none"
                   {...field}
                 />
@@ -241,11 +287,10 @@ export function CourseForm({ initialData, onClose }: CourseFormProps) {
           )}
           <Button type="submit" disabled={isLoading || isTeachersLoading} className="bg-accent hover:bg-accent/90">
             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {initialData ? "Update Course" : "Add Course"}
+            {initialData?.id ? "Update Subject" : "Add Subject"}
           </Button>
         </div>
       </form>
     </Form>
   );
 }
-

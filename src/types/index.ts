@@ -1,10 +1,17 @@
 export interface Course {
   id: string;
-  name: string;
-  code: string;
+  name: string; // This will now be the subject name, e.g., Mathematics
+  code: string; // Subject code, e.g., MATH101
   description?: string;
   teacherId?: string; // ID of the user assigned as teacher
   teacherName?: string; // Denormalized teacher name for display
+  
+  category: string; // e.g., "General Education", "TVET"
+  combination: string; // e.g., "MCB", "Software Development"
+  // Note: The actual subjects like 'Mathematics', 'Chemistry' that were in the user's example
+  // are now represented by the 'name' field of this Course interface.
+  // A "Course" entity is an individual subject belonging to a category and combination.
+
   createdAt: Date;
   updatedAt: Date;
 }
@@ -23,7 +30,7 @@ export interface Enrollment {
   id: string; // Firebase document ID
   studentId: string;
   studentName: string; // Denormalized
-  courseId: string;
+  courseId: string; // This refers to the ID of a Course (subject)
   courseName: string; // Denormalized (e.g. "Mathematics (MATH101)")
   enrolledAt: Date;
 }
@@ -32,8 +39,8 @@ export interface Grade {
   id: string;
   studentId: string; // Link to the Student document
   studentName: string; // Denormalized from Student
-  courseId: string;
-  courseName: string; // Denormalized from Course
+  courseId: string; // This refers to the ID of a Course (subject)
+  courseName: string; // Denormalized from Course (subject)
   marks: number;
   status: 'Pass' | 'Fail';
   remarks?: string;
@@ -61,14 +68,15 @@ export interface Class {
   updatedAt: Date;
 }
 
+// Represents the assignment of a "Course" (which is now a subject) to a "Class" (student group)
+// This seems distinct from the Category/Combination structure for defining subjects.
+// For now, we'll keep this as is, but its usage might need review
+// if "Class" also implies a specific category/combination.
 export interface ClassCourseAssignment {
   id: string; // Firebase document ID
   classId: string;
   className: string; // Denormalized
-  courseId: string;
+  courseId: string; // Refers to the ID of a Course (subject)
   courseName: string; // Denormalized (e.g. "Mathematics (MATH101)")
-  // Optional: teacherId specific to this class-course assignment if different from course default
-  // teacherId?: string; 
-  // teacherName?: string;
   assignedAt: Date;
 }

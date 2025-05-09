@@ -16,7 +16,7 @@ export interface NavItem {
 // Admin specific navigation
 export const adminNavItems: NavItem[] = [
   { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/admin/dashboard/courses", label: "Courses", icon: BookOpen },
+  { href: "/admin/dashboard/courses", label: "Subjects", icon: BookOpen }, // Changed from Courses to Subjects
   { href: "/admin/dashboard/grades", label: "Grades", icon: ClipboardList },
   { href: "/admin/dashboard/reports", label: "Reports", icon: FileText },
   { href: "/admin/settings", label: "Settings", icon: Settings },
@@ -35,10 +35,7 @@ export default function AdminSidebarNav({ isMobile = false }: AdminSidebarNavPro
       {navItems.map((item) => {
         const isActive =
           pathname === item.href ||
-          // Check if current path starts with item.href, but exclude dashboard and settings
-          // to prevent them from being active for all their sub-routes if not strictly matching.
           (pathname.startsWith(item.href) && item.href !== "/admin/dashboard" && item.href !== "/admin/settings") ||
-          // Specific check for settings to be active for /admin/settings/*
           (item.href === "/admin/settings" && pathname.startsWith("/admin/settings"));
 
         const buttonVariant = isActive ? "default" : "ghost";
