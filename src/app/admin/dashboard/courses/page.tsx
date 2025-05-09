@@ -9,6 +9,7 @@ import { db } from "@/lib/firebase";
 import { collection, deleteDoc, doc, getDocs, query, orderBy, Timestamp, where } from "firebase/firestore";
 import { useEffect, useState, useMemo } from "react";
 import { PlusCircle, Edit3, Trash2, BookOpen, Loader2, AlertTriangle, UserCheck, Filter } from "lucide-react";
+import { Label as FormLabel } from "@/components/ui/label"; // Added import for FormLabel
 import {
   Dialog,
   DialogContent,
