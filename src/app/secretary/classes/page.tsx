@@ -7,7 +7,7 @@ import type { Class } from "@/types";
 import { db } from "@/lib/firebase";
 import { collection, deleteDoc, doc, getDocs, query, orderBy, Timestamp } from "firebase/firestore";
 import { useEffect, useState } from "react";
-import { PlusCircle, Edit3, Trash2, Archive, Loader2, AlertTriangle } from "lucide-react";
+import { PlusCircle, Edit3, Trash2, Archive, Loader2, AlertTriangle, UserCircle, CalendarDays } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/ui/badge";
 
 export default function SecretaryManageClassesPage() {
   const [classes, setClasses] = useState<Class[]>([]);
@@ -76,9 +77,6 @@ export default function SecretaryManageClassesPage() {
 
   const handleDelete = async (classId: string, className: string) => {
     try {
-      // TODO: Add check for existing enrollments or class assignments before deleting
-      // This could involve querying 'enrollments' and 'classAssignments' collections.
-      // For Lite version, direct delete is performed. User should be warned.
       await deleteDoc(doc(db, "classes", classId));
       toast({ title: "Class Deleted", description: `Class "${className}" has been deleted.` });
       fetchClasses(); 
@@ -174,6 +172,20 @@ export default function SecretaryManageClassesPage() {
                           <CardDescription className="pt-1 text-sm">
                             {classItem.description || "No description provided."}
                           </CardDescription>
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            {classItem.academicYear && (
+                              <Badge variant="outline" className="text-xs">
+                                <CalendarDays className="mr-1.5 h-3 w-3" />
+                                Year: {classItem.academicYear}
+                              </Badge>
+                            )}
+                            {classItem.secretaryName && (
+                              <Badge variant="secondary" className="text-xs">
+                                <UserCircle className="mr-1.5 h-3 w-3" />
+                                Managed by: {classItem.secretaryName.split('@')[0]}
+                              </Badge>
+                            )}
+                          </div>
                         </div>
                         <div className="flex items-center gap-2">
                           <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => handleEdit(classItem)}>

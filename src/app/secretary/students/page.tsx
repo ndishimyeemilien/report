@@ -7,7 +7,7 @@ import type { Student } from "@/types";
 import { db } from "@/lib/firebase";
 import { collection, deleteDoc, doc, getDocs, query, orderBy, Timestamp, addDoc, serverTimestamp, where, type FieldValue } from "firebase/firestore"; 
 import { useEffect, useState } from "react";
-import { PlusCircle, Edit3, Trash2, Users, Loader2, AlertTriangle, UploadCloud } from "lucide-react";
+import { PlusCircle, Edit3, Trash2, Users, Loader2, AlertTriangle, UploadCloud, Users2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -38,10 +38,12 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ExcelImportDialog } from "@/components/shared/ExcelImportDialog";
+import { Badge } from "@/components/ui/badge";
+
 
 interface StudentExcelRow {
   fullName: string;
-  studentSystemId?: string | number; // Can be string or number from Excel
+  studentSystemId?: string | number; 
   email?: string;
 }
 
@@ -155,7 +157,6 @@ export default function SecretaryStudentsPage() {
       }
 
       try {
-        // Check for duplicates using studentSystemId if it's provided and not empty
         if (dataForFirestore.studentSystemId) {
             const q = query(collection(db, "students"), where("studentSystemId", "==", dataForFirestore.studentSystemId));
             const existingStudentSnap = await getDocs(q);
@@ -254,7 +255,7 @@ export default function SecretaryStudentsPage() {
         <Card className="text-center py-12">
           <CardHeader>
             <div className="mx-auto bg-secondary rounded-full p-3 w-fit">
-             <Users className="h-12 w-12 text-muted-foreground" data-ai-hint="users group" />
+             <Users2 className="h-12 w-12 text-muted-foreground" data-ai-hint="users group" />
             </div>
             <CardTitle className="mt-4 text-2xl">No Students Found</CardTitle>
             <CardDescription>
@@ -275,9 +276,10 @@ export default function SecretaryStudentsPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-[250px]">Full Name</TableHead>
+                    <TableHead className="w-[200px]">Full Name</TableHead>
                     <TableHead>Student ID</TableHead>
                     <TableHead>Email</TableHead>
+                    <TableHead>Assigned Class</TableHead>
                     <TableHead>Registered On</TableHead>
                     <TableHead className="text-right w-[100px]">Actions</TableHead>
                   </TableRow>
@@ -288,6 +290,13 @@ export default function SecretaryStudentsPage() {
                       <TableCell className="font-medium">{student.fullName}</TableCell>
                       <TableCell>{student.studentSystemId || "N/A"}</TableCell>
                       <TableCell>{student.email || "N/A"}</TableCell>
+                      <TableCell>
+                        {student.className ? (
+                          <Badge variant="secondary">{student.className}</Badge>
+                        ) : (
+                          <span className="text-muted-foreground italic">Not Assigned</span>
+                        )}
+                      </TableCell>
                       <TableCell>{formatDate(student.createdAt)}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">

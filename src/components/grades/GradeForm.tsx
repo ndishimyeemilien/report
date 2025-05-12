@@ -17,20 +17,20 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { db } from "@/lib/firebase";
-import type { Grade, Course, Student } from "@/types"; // Added Student
+import type { Grade, Course, Student } from "@/types"; 
 import { useAuth } from "@/context/AuthContext";
-import { addDoc, collection, doc, serverTimestamp, updateDoc, query, where, getDocs } from "firebase/firestore";
+import { addDoc, collection, doc, serverTimestamp, updateDoc, query, where, getDocs, type FieldValue } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
 
-const PASS_MARK = 40;
+const PASS_MARK = 50; // Changed from 40 to 50
 
 const gradeFormSchema = z.object({
   studentId: z.string().min(1, { message: "Please select a student." }),
-  // courseId is now implicitly set by the passed `course` prop
   marks: z.coerce.number().min(0, "Marks cannot be negative.").max(100, "Marks cannot exceed 100."),
   remarks: z.string().max(200).optional(),
+  term: z.string().optional(), // Added term, though it will be defaulted for now
 });
 
 type GradeFormValues = z.infer<typeof gradeFormSchema>;
@@ -38,8 +38,8 @@ type GradeFormValues = z.infer<typeof gradeFormSchema>;
 interface GradeFormProps {
   initialData?: Grade | null;
   onClose?: () => void;
-  course: Course; // The course for which grades are being entered
-  students: Student[]; // List of students (should be enrolled students for teachers)
+  course: Course; 
+  students: Student[]; 
 }
 
 export function GradeForm({ initialData, onClose, course, students }: GradeFormProps) {
@@ -55,10 +55,12 @@ export function GradeForm({ initialData, onClose, course, students }: GradeFormP
       studentId: initialData.studentId,
       marks: initialData.marks,
       remarks: initialData.remarks || "",
+      term: initialData.term || "Term 1",
     } : {
       studentId: "",
       marks: 0,
       remarks: "",
+      term: "Term 1",
     },
   });
 
@@ -77,7 +79,6 @@ export function GradeForm({ initialData, onClose, course, students }: GradeFormP
         return;
     }
 
-    // Check if grade already exists for this student in this course (for new entries only)
     if (!initialData) {
       const gradeQuery = query(
         collection(db, "grades"),
@@ -96,18 +97,18 @@ export function GradeForm({ initialData, onClose, course, students }: GradeFormP
       }
     }
 
-
     const status: 'Pass' | 'Fail' = values.marks >= PASS_MARK ? 'Pass' : 'Fail';
 
-    const gradePayload: Partial<Omit<Grade, 'id'>> = {
+    const gradePayload: Partial<Omit<Grade, 'id'>> & { updatedAt: FieldValue, createdAt?: FieldValue } = {
         studentId: values.studentId,
         studentName: selectedStudent.fullName,
-        courseId: course.id, // Use the passed course prop
+        courseId: course.id, 
         courseName: `${course.name} (${course.code})`,
         marks: values.marks,
         status,
         remarks: values.remarks,
-        updatedAt: serverTimestamp() as unknown as Date,
+        term: values.term || "Term 1", // Default to "Term 1" if not provided
+        updatedAt: serverTimestamp(),
         enteredByTeacherId: userProfile.uid,
         enteredByTeacherEmail: userProfile.email || undefined,
     };
@@ -119,10 +120,8 @@ export function GradeForm({ initialData, onClose, course, students }: GradeFormP
         await updateDoc(gradeRef, gradePayload);
         toast({ title: "Grade Updated", description: `Grade for ${selectedStudent.fullName} in ${course.name} updated.` });
       } else {
-        await addDoc(collection(db, "grades"), {
-          ...gradePayload,
-          createdAt: serverTimestamp(),
-        });
+        gradePayload.createdAt = serverTimestamp();
+        await addDoc(collection(db, "grades"), gradePayload);
         toast({ title: "Grade Added", description: `Grade for ${selectedStudent.fullName} in ${course.name} added.` });
       }
       router.refresh();
@@ -136,7 +135,7 @@ export function GradeForm({ initialData, onClose, course, students }: GradeFormP
       });
     } finally {
       setIsLoading(false);
-      if (!initialData) form.reset();
+      if (!initialData) form.reset({ studentId: "", marks: 0, remarks: "", term: "Term 1"});
     }
   };
 
@@ -152,7 +151,7 @@ export function GradeForm({ initialData, onClose, course, students }: GradeFormP
               <Select 
                 onValueChange={field.onChange} 
                 defaultValue={field.value} 
-                disabled={isDataLoading || !!initialData} // Disable if editing existing grade
+                disabled={isDataLoading || !!initialData} 
               >
                 <FormControl>
                   <SelectTrigger>
@@ -177,7 +176,6 @@ export function GradeForm({ initialData, onClose, course, students }: GradeFormP
             </FormItem>
           )}
         />
-        {/* Course selection is removed, as course is passed as a prop */}
         <FormField
           control={form.control}
           name="marks"
@@ -208,6 +206,21 @@ export function GradeForm({ initialData, onClose, course, students }: GradeFormP
             </FormItem>
           )}
         />
+         {/* Term field could be added here if it needs to be editable 
+         <FormField
+          control={form.control}
+          name="term"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Term</FormLabel>
+              <FormControl>
+                <Input placeholder="e.g., Term 1" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        /> 
+        */}
         <div className="flex justify-end gap-2">
           {onClose && (
             <Button type="button" variant="outline" onClick={onClose} disabled={isLoading || isDataLoading}>
@@ -223,4 +236,3 @@ export function GradeForm({ initialData, onClose, course, students }: GradeFormP
     </Form>
   );
 }
-

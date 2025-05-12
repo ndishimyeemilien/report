@@ -1,8 +1,9 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { BookOpen, ClipboardList, Users, BarChart3, UsersRound, UserCog, Percent } from "lucide-react"; 
+import { BookOpen, ClipboardList, Users, BarChart3, UsersRound, UserCog, Percent, ListChecks } from "lucide-react"; 
 import Link from "next/link";
-import { collection, getDocs, query, where } from "firebase/firestore";
+import { collection, getDocs, query, where, Timestamp, orderBy, limit } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import type { Grade } from "@/types"; // For recentGrades
 
 async function getStats() {
   try {
@@ -12,6 +13,16 @@ async function getStats() {
     const enrollmentsSnapshot = await getDocs(collection(db, "enrollments"));
     const teachersQuery = query(collection(db, "users"), where("role", "==", "Teacher"));
     const teachersSnapshot = await getDocs(teachersQuery);
+
+    const recentGradesQuery = query(collection(db, "grades"), orderBy("createdAt", "desc"), limit(5));
+    const recentGradesSnapshot = await getDocs(recentGradesQuery);
+    const recentGrades = recentGradesSnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+      createdAt: (doc.data().createdAt as Timestamp)?.toDate(),
+      updatedAt: (doc.data().updatedAt as Timestamp)?.toDate(),
+    })) as Grade[];
+
 
     let totalPasses = 0;
     gradesSnapshot.forEach(doc => {
@@ -29,6 +40,7 @@ async function getStats() {
       totalTeachers: teachersSnapshot.size,
       totalStudents: studentsSnapshot.size,
       totalEnrollments: enrollmentsSnapshot.size,
+      recentGrades,
       error: null,
     };
   } catch (error) {
@@ -40,6 +52,7 @@ async function getStats() {
       totalTeachers: 0,
       totalStudents: 0,
       totalEnrollments: 0,
+      recentGrades: [],
       error: "Could not load statistics.",
     };
   }
@@ -47,17 +60,22 @@ async function getStats() {
 
 
 export default async function DashboardPage() {
-  const { totalCourses, totalGrades, overallPassRate,totalTeachers, totalStudents, totalEnrollments, error: statsError } = await getStats();
+  const { totalCourses, totalGrades, overallPassRate,totalTeachers, totalStudents, totalEnrollments, recentGrades, error: statsError } = await getStats();
 
   const stats = [
-    { title: "Total Subjects", value: totalCourses.toString(), icon: BookOpen, href: "/admin/dashboard/courses", iconColor: "text-blue-500" }, // Changed from Total Courses
+    { title: "Total Subjects", value: totalCourses.toString(), icon: BookOpen, href: "/admin/dashboard/courses", iconColor: "text-blue-500" }, 
     { title: "Grades Recorded", value: totalGrades.toString(), icon: ClipboardList, href: "/admin/dashboard/grades", iconColor: "text-green-500" },
-    { title: "Overall Pass Rate", value: overallPassRate.toFixed(1) + "%", icon: Percent, href: "/admin/dashboard/reports", iconColor: "text-teal-500" }, // Using Percent icon
-    { title: "Total Teachers", value: totalTeachers.toString(), icon: UserCog, href: "/admin/dashboard/courses", iconColor: "text-orange-500" }, // Assuming courses page shows teachers
+    { title: "Overall Pass Rate", value: overallPassRate.toFixed(1) + "%", icon: Percent, href: "/admin/dashboard/reports", iconColor: "text-teal-500" }, 
+    { title: "Total Teachers", value: totalTeachers.toString(), icon: UserCog, href: "/admin/dashboard/courses", iconColor: "text-orange-500" }, 
     { title: "Total Students", value: totalStudents.toString(), icon: Users, href: "/secretary/students", iconColor: "text-purple-500" }, 
     { title: "Total Enrollments", value: totalEnrollments.toString(), icon: UsersRound, href: "/secretary/enrollments", iconColor: "text-indigo-500" }, 
     { title: "View Reports", value: "Analytics", icon: BarChart3, href: "/admin/dashboard/reports", iconColor: "text-yellow-500" },
   ];
+
+  const formatDate = (date: Date | undefined) => {
+    if (!date) return 'N/A';
+    return new Date(date).toLocaleDateString();
+  };
 
   return (
     <div className="container mx-auto py-8">
@@ -74,7 +92,7 @@ export default async function DashboardPage() {
         </Card>
       )}
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"> {/* Adjusted for potentially more items */}
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"> 
         {stats.map((stat) => (
            <Link href={stat.href} key={stat.title}>
             <Card className={`hover:shadow-lg transition-shadow duration-200`}>
@@ -101,10 +119,7 @@ export default async function DashboardPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-muted-foreground">
-              Secretaries handle student and enrollment management. Teachers manage grades for their assigned subjects. Admins have oversight of all areas.
-            </p>
-            <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="rounded-lg border bg-card p-6 shadow-sm">
                     <h3 className="text-lg font-semibold mb-2 text-primary">Key Admin Functions</h3>
                     <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
@@ -118,11 +133,31 @@ export default async function DashboardPage() {
                     <h3 className="text-lg font-semibold mb-2 text-accent">System Workflow</h3>
                      <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
                         <li>Admins define subjects within categories/combinations and assign teachers.</li>
-                        <li>Secretaries register students and enroll them in classes (which link to subjects).</li>
+                        <li>Secretaries register students, assign them to classes, and enroll them.</li>
                         <li>Teachers enter grades for students in their assigned subjects.</li>
                         <li>Admins monitor overall academic performance via reports.</li>
                     </ul>
                 </div>
+            </div>
+            <div className="mt-8">
+                <h3 className="text-lg font-semibold mb-3 text-primary flex items-center">
+                    <ListChecks className="mr-2 h-5 w-5" />
+                    Recent Grades Entered
+                </h3>
+                {recentGrades.length > 0 ? (
+                <ScrollArea className="h-40 rounded-md border p-3">
+                    <ul className="space-y-2">
+                    {recentGrades.map((grade) => (
+                        <li key={grade.id} className="text-sm text-muted-foreground p-2 rounded-md hover:bg-muted/50 transition-colors">
+                        <span className="font-medium text-foreground">{grade.studentName}</span> - {grade.courseName}: <span className="font-semibold text-primary">{grade.marks}</span>
+                        <span className="text-xs block text-muted-foreground/80">On: {formatDate(grade.createdAt)} by {grade.enteredByTeacherEmail?.split('@')[0] || 'System'}</span>
+                        </li>
+                    ))}
+                    </ul>
+                </ScrollArea>
+                ) : (
+                <p className="text-sm text-muted-foreground italic">No grades have been entered recently.</p>
+                )}
             </div>
           </CardContent>
         </Card>

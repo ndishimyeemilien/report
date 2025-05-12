@@ -17,14 +17,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { db } from "@/lib/firebase";
 import type { Class } from "@/types";
-import { addDoc, collection, doc, serverTimestamp, updateDoc, type FieldValue } from "firebase/firestore";
-// import { useRouter } from "next/navigation"; // Not strictly needed if parent handles refresh
+import { addDoc, collection, doc, serverTimestamp, updateDoc, type FieldValue, deleteField } from "firebase/firestore";
+import { useAuth } from "@/context/AuthContext";
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
 
 const classFormSchema = z.object({
   name: z.string().min(2, { message: "Class name must be at least 2 characters." }).max(100),
   description: z.string().max(500).optional(),
+  academicYear: z.string().max(50).optional().describe("e.g., 2023-2024"),
 });
 
 type ClassFormValues = z.infer<typeof classFormSchema>;
@@ -36,7 +37,7 @@ interface ClassFormProps {
 
 export function ClassForm({ initialData, onClose }: ClassFormProps) {
   const { toast } = useToast();
-  // const router = useRouter();
+  const { userProfile } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<ClassFormValues>({
@@ -44,45 +45,52 @@ export function ClassForm({ initialData, onClose }: ClassFormProps) {
     defaultValues: initialData ? {
       name: initialData.name,
       description: initialData.description || "",
+      academicYear: initialData.academicYear || "",
     } : {
       name: "",
       description: "",
+      academicYear: "",
     },
   });
 
   const onSubmit = async (values: ClassFormValues) => {
     setIsLoading(true);
+    if (!userProfile) {
+        toast({ title: "Authentication Error", description: "You must be logged in.", variant: "destructive"});
+        setIsLoading(false);
+        return;
+    }
     
-    const dataToSave: {
-        name: string;
-        description?: string | null; // Allow null for Firestore
-        updatedAt: FieldValue;
-        createdAt?: FieldValue;
-    } = {
+    const dataToSave: Partial<Omit<Class, 'id' | 'createdAt' | 'updatedAt'>> & { updatedAt: FieldValue, secretaryId?: string | FieldValue, secretaryName?: string | FieldValue, description?: string | FieldValue | null, academicYear?: string | FieldValue } = {
         name: values.name,
         updatedAt: serverTimestamp(),
+        secretaryId: userProfile.uid,
+        secretaryName: userProfile.email || "Unknown Secretary",
     };
 
     if (values.description && values.description.trim() !== "") {
         dataToSave.description = values.description;
     } else {
-        // If description is empty or only whitespace, store it as null or omit it.
-        // Storing as null explicitly sets it, omitting it leaves it undefined if not previously set.
-        // For updates, if you want to remove a description, you'd use deleteField().
-        // Here, we'll set to null if it's empty, for consistency.
-        dataToSave.description = null; 
+        dataToSave.description = initialData?.id ? deleteField() : null; 
+    }
+
+    if (values.academicYear && values.academicYear.trim() !== "") {
+        dataToSave.academicYear = values.academicYear;
+    } else {
+        dataToSave.academicYear = initialData?.id ? deleteField() : undefined;
     }
 
 
     try {
       if (initialData) { 
         const classRef = doc(db, "classes", initialData.id);
-        // Ensure createdAt is not in update payload if it was part of dataToSave initially (it's not in this structure)
-        await updateDoc(classRef, dataToSave); // dataToSave already excludes createdAt for updates
+        await updateDoc(classRef, dataToSave); 
         toast({ title: "Class Updated", description: `Class "${values.name}" has been successfully updated.` });
       } else { 
-        dataToSave.createdAt = serverTimestamp();
-        await addDoc(collection(db, "classes"), dataToSave);
+        await addDoc(collection(db, "classes"), {
+            ...dataToSave,
+            createdAt: serverTimestamp()
+        });
         toast({ title: "Class Added", description: `Class "${values.name}" has been successfully added.` });
       }
       if (onClose) onClose(); 
@@ -110,6 +118,19 @@ export function ClassForm({ initialData, onClose }: ClassFormProps) {
               <FormLabel>Class Name</FormLabel>
               <FormControl>
                 <Input placeholder="e.g., Grade 10A, Afternoon Batch" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="academicYear"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Academic Year (Optional)</FormLabel>
+              <FormControl>
+                <Input placeholder="e.g., 2023-2024, Sept 2024 Intake" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -147,4 +168,3 @@ export function ClassForm({ initialData, onClose }: ClassFormProps) {
     </Form>
   );
 }
-

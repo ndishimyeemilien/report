@@ -17,43 +17,41 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { auth, db } from "@/lib/firebase";
-import { doc, setDoc } from "firebase/firestore";
+import { doc, setDoc, serverTimestamp, type FieldValue } from "firebase/firestore";
 import type { UserProfile, UserRole } from "@/types";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useState } from "react";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 
-// Admin secret code can be re-enabled if stricter admin creation is desired.
-// const ADMIN_SECRET_CODE = "emilien&jules"; 
+const ADMIN_SECRET_CODE = "emilien&jules"; 
 
 const formSchema = z.object({
   email: z.string().email({ message: "Invalid email address." }),
   password: z.string().min(6, { message: "Password must be at least 6 characters." }),
   confirmPassword: z.string(),
   role: z.enum(['Admin', 'Teacher', 'Secretary'], { required_error: "Please select a role." }),
-  // adminSecret: z.string().optional(), // Re-enable if using ADMIN_SECRET_CODE
+  adminSecret: z.string().optional(),
 }).refine(data => data.password === data.confirmPassword, {
   message: "Passwords don't match",
   path: ["confirmPassword"],
+}).refine(data => {
+  if (data.role === 'Admin') {
+    return !!data.adminSecret && data.adminSecret.length > 0;
+  }
+  return true;
+}, {
+  message: "Admin secret code is required for Admin role.",
+  path: ["adminSecret"],
+}).refine(data => {
+  if (data.role === 'Admin') {
+    return data.adminSecret === ADMIN_SECRET_CODE;
+  }
+  return true;
+}, {
+  message: "Invalid admin secret code.",
+  path: ["adminSecret"],
 });
-// .refine(data => { // Re-enable if using ADMIN_SECRET_CODE
-//   if (data.role === 'Admin') {
-//     return !!data.adminSecret && data.adminSecret.length > 0;
-//   }
-//   return true;
-// }, {
-//   message: "Admin secret code is required for Admin role.",
-//   path: ["adminSecret"],
-// }).refine(data => { // Re-enable if using ADMIN_SECRET_CODE
-//   if (data.role === 'Admin') {
-//     return data.adminSecret === ADMIN_SECRET_CODE;
-//   }
-//   return true;
-// }, {
-//   message: "Invalid admin secret code.",
-//   path: ["adminSecret"],
-// });
 
 export function RegisterForm() {
   const { toast } = useToast();
@@ -69,11 +67,11 @@ export function RegisterForm() {
       password: "",
       confirmPassword: "",
       role: undefined, 
-      // adminSecret: "", // Re-enable if using ADMIN_SECRET_CODE
+      adminSecret: "",
     },
   });
 
-  // const selectedRole = form.watch("role"); // Re-enable if using ADMIN_SECRET_CODE
+  const selectedRole = form.watch("role");
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
@@ -82,12 +80,13 @@ export function RegisterForm() {
       const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
       const user = userCredential.user;
 
-      const userProfile: UserProfile = {
-        uid: user.uid,
+      const userProfileData: Omit<UserProfile, 'uid'> & { createdAt: FieldValue; updatedAt: FieldValue } = {
         email: user.email,
         role: values.role as UserRole,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
       };
-      await setDoc(doc(db, "users", user.uid), userProfile);
+      await setDoc(doc(db, "users", user.uid), userProfileData);
 
       toast({
         title: "Registration Successful",
@@ -200,7 +199,6 @@ export function RegisterForm() {
             </FormItem>
           )}
         />
-        {/* Re-enable if using ADMIN_SECRET_CODE
         {selectedRole === 'Admin' && (
           <FormField
             control={form.control}
@@ -216,7 +214,6 @@ export function RegisterForm() {
             )}
           />
         )}
-        */}
         <Button type="submit" className="w-full" disabled={isLoading}>
           {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           Register
@@ -231,4 +228,3 @@ export function RegisterForm() {
     </Form>
   );
 }
-

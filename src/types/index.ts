@@ -21,6 +21,8 @@ export interface Student {
   fullName: string;
   studentSystemId?: string; // Optional: School's unique ID for the student
   email?: string; // Optional
+  classId?: string; // ID of the Class the student is assigned to
+  className?: string; // Denormalized name of the Class
   // Add other student-specific fields as needed, e.g., dateOfBirth, contactInfo etc.
   createdAt: Date;
   updatedAt: Date;
@@ -44,6 +46,7 @@ export interface Grade {
   marks: number;
   status: 'Pass' | 'Fail';
   remarks?: string;
+  term?: string; // e.g., "Term 1", "Term 2"
   enteredByTeacherId?: string; // UID of the teacher who entered/last modified
   enteredByTeacherEmail?: string; // Email of the teacher
   createdAt: Date;
@@ -56,22 +59,22 @@ export interface UserProfile {
   uid: string;
   email: string | null;
   role: UserRole;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 export interface Class {
   id: string;
   name: string; // e.g., "Grade 10A", "Form 3 Blue"
   description?: string;
-  // teacherId?: string; // Optional: Homeroom teacher if applicable
-  // teacherName?: string; 
+  academicYear?: string; // e.g., "2023-2024"
+  secretaryId?: string; // UID of the secretary who created/manages the class
+  secretaryName?: string; // Denormalized name of the secretary
   createdAt: Date;
   updatedAt: Date;
 }
 
 // Represents the assignment of a "Course" (which is now a subject) to a "Class" (student group)
-// This seems distinct from the Category/Combination structure for defining subjects.
-// For now, we'll keep this as is, but its usage might need review
-// if "Class" also implies a specific category/combination.
 export interface ClassCourseAssignment {
   id: string; // Firebase document ID
   classId: string;
