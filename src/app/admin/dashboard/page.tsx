@@ -1,9 +1,11 @@
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { BookOpen, ClipboardList, Users, BarChart3, UsersRound, UserCog, Percent, ListChecks } from "lucide-react"; 
 import Link from "next/link";
 import { collection, getDocs, query, where, Timestamp, orderBy, limit } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import type { Grade } from "@/types"; // For recentGrades
+import type { Grade } from "@/types"; 
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 async function getStats() {
   try {
@@ -165,3 +167,4 @@ export default async function DashboardPage() {
     </div>
   );
 }
+
