@@ -3,12 +3,12 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { GradeForm } from "@/components/grades/GradeForm";
-import type { Grade, Course, Student, Enrollment } from "@/types"; 
+import type { Grade, Course, Student, Class, ClassCourseAssignment } from "@/types"; 
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
 import { collection, deleteDoc, doc, getDocs, query, orderBy, Timestamp, where, documentId, addDoc, serverTimestamp, updateDoc } from "firebase/firestore";
-import React, { useEffect, useState, useCallback } from "react";
-import { PlusCircle, Edit3, Trash2, ClipboardList, Loader2, AlertTriangle, User, Info, BookOpen, Users, UploadCloud } from "lucide-react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
+import { PlusCircle, Edit3, Trash2, ClipboardList, Loader2, AlertTriangle, User, Info, Filter, UploadCloud } from "lucide-react"; // Removed BookOpen, Users - added Filter
 import {
   Dialog,
   DialogContent,
@@ -47,135 +47,158 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { useSearchParams } from "next/navigation";
-import Link from "next/link";
+import Link from "next/link"; // Keep Link if needed for other parts, not strictly for this page's core flow
 import { ExcelImportDialog } from "@/components/shared/ExcelImportDialog";
 
-const PASS_MARK = 40;
+const PASS_MARK = 50;
 
 interface GradeExcelRow {
-  studentSystemId: string;
-  marks: string; // XLSX reads numbers as strings sometimes, or they might be actual numbers
+  studentSystemId: string; // Must match an existing student in the selected class
+  marks: string; // Will be parsed to number
   remarks?: string;
 }
 
-
 export default function TeacherGradesPage() {
   const { userProfile, loading: authLoading } = useAuth();
-  const searchParams = useSearchParams();
-  const preselectedCourseId = searchParams.get('courseId');
   
   const [grades, setGrades] = useState<Grade[]>([]);
-  const [assignedCourses, setAssignedCourses] = useState<Course[]>([]);
-  const [enrolledStudents, setEnrolledStudents] = useState<Student[]>([]); 
-  const [selectedCourseId, setSelectedCourseId] = useState<string | null>(preselectedCourseId);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isGradesLoading, setIsGradesLoading] = useState(false);
+  const [allClasses, setAllClasses] = useState<Class[]>([]);
+  const [allClassAssignments, setAllClassAssignments] = useState<ClassCourseAssignment[]>([]);
+  const [teacherAssignedSubjects, setTeacherAssignedSubjects] = useState<Course[]>([]);
+  
+  const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
+  const [selectedSubjectId, setSelectedSubjectId] = useState<string | null>(null);
+  
+  const [studentsInSelectedClass, setStudentsInSelectedClass] = useState<Student[]>([]);
+  
+  const [isLoadingInitialData, setIsLoadingInitialData] = useState(true);
+  const [isGradesLoading, setIsGradesLoading] = useState(false); // For grades and students of selected class/subject
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingGrade, setEditingGrade] = useState<Grade | null>(null);
   const [isImportGradesDialogOpen, setIsImportGradesDialogOpen] = useState(false);
   const { toast } = useToast();
 
+  // Fetch initial data: all classes, all subjects assigned to this teacher, all class-course assignments
   useEffect(() => {
     if (!userProfile || authLoading) {
-      setIsLoading(false);
+      setIsLoadingInitialData(false);
       return;
     }
-    setIsLoading(true);
-    const fetchAssignedCourses = async () => {
+    setIsLoadingInitialData(true);
+    const fetchData = async () => {
       try {
-        const q = query(collection(db, "courses"), where("teacherId", "==", userProfile.uid), orderBy("name"));
-        const querySnapshot = await getDocs(q);
-        const coursesData = querySnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data(),
-        })) as Course[];
-        setAssignedCourses(coursesData);
-        if (coursesData.length > 0 && !selectedCourseId) {
-          setSelectedCourseId(coursesData[0].id); 
-        } else if (preselectedCourseId && !coursesData.find(c => c.id === preselectedCourseId)) {
-           toast({title:"Course Not Found", description: "The previously selected course is not assigned to you or does not exist.", variant: "destructive"});
-           setSelectedCourseId(coursesData.length > 0 ? coursesData[0].id : null);
-        } else if (selectedCourseId && !coursesData.find(c => c.id === selectedCourseId) && coursesData.length > 0) {
-          // If a previously selected course ID is no longer valid (e.g. teacher unassigned), select the first one.
-          setSelectedCourseId(coursesData[0].id);
-        }
+        const classesQuery = query(collection(db, "classes"), orderBy("name"));
+        const teacherSubjectsQuery = query(collection(db, "courses"), where("teacherId", "==", userProfile.uid), orderBy("name"));
+        const classAssignmentsQuery = query(collection(db, "classAssignments")); // No specific order needed here, will be filtered
+
+        const [classesSnap, teacherSubjectsSnap, classAssignmentsSnap] = await Promise.all([
+          getDocs(classesQuery),
+          getDocs(teacherSubjectsQuery),
+          getDocs(classAssignmentsQuery),
+        ]);
+
+        setAllClasses(classesSnap.docs.map(d => ({ id: d.id, ...d.data() } as Class)));
+        setTeacherAssignedSubjects(teacherSubjectsSnap.docs.map(d => ({ id: d.id, ...d.data() } as Course)));
+        setAllClassAssignments(classAssignmentsSnap.docs.map(d => ({ id: d.id, ...d.data() } as ClassCourseAssignment)));
+
       } catch (err) {
-        console.error("Error fetching assigned courses: ", err);
-        toast({ title: "Error", description: "Could not load your courses.", variant: "destructive" });
+        console.error("Error fetching initial data for teacher grades page: ", err);
+        toast({ title: "Error", description: "Could not load necessary data for page setup.", variant: "destructive" });
       } finally {
-        setIsLoading(false);
+        setIsLoadingInitialData(false);
       }
     };
-    fetchAssignedCourses();
-  }, [userProfile, authLoading, toast, preselectedCourseId, selectedCourseId]);
+    fetchData();
+  }, [userProfile, authLoading, toast]);
 
-  
-  const fetchCourseData = useCallback(async (courseId: string | null) => {
-    if (!courseId || !userProfile) {
+  // Memoized list of subjects available for selection based on selectedClassId and teacher's assigned subjects
+  const availableSubjectsForSelectedClass = useMemo(() => {
+    if (!selectedClassId || !userProfile) return [];
+    // Find subject IDs assigned to the selected class
+    const subjectIdsInClass = allClassAssignments
+      .filter(ca => ca.classId === selectedClassId)
+      .map(ca => ca.courseId); // courseId here is the subjectId
+    // Filter teacher's assigned subjects to only include those also present in the selected class's assignments
+    return teacherAssignedSubjects.filter(ts => subjectIdsInClass.includes(ts.id));
+  }, [selectedClassId, allClassAssignments, teacherAssignedSubjects, userProfile]);
+
+  // Fetch students for the selected class AND grades for selected class AND subject
+  const fetchClassAndGradeData = useCallback(async () => {
+    if (!selectedClassId || !selectedSubjectId || !userProfile) {
       setGrades([]);
-      setEnrolledStudents([]);
+      setStudentsInSelectedClass([]); // Ensure students are cleared if no class/subject
       setIsGradesLoading(false);
       return;
     }
     setIsGradesLoading(true);
     try {
-      const gradesQuery = query(
-        collection(db, "grades"), 
-        where("courseId", "==", courseId),
-        orderBy("studentName", "asc")
-      );
-      const gradesSnapshot = await getDocs(gradesQuery);
-      const gradesData = gradesSnapshot.docs.map(gradeDoc => ({ 
-        id: gradeDoc.id,
-        ...gradeDoc.data(),
-        createdAt: (gradeDoc.data().createdAt as Timestamp)?.toDate(),
-        updatedAt: (gradeDoc.data().updatedAt as Timestamp)?.toDate(),
-      })) as Grade[];
-      setGrades(gradesData);
-
-      const enrollmentsQuery = query(collection(db, "enrollments"), where("courseId", "==", courseId));
-      const enrollmentsSnapshot = await getDocs(enrollmentsQuery);
-      const studentIdsInCourse = enrollmentsSnapshot.docs.map(enrollmentDoc => (enrollmentDoc.data() as Enrollment).studentId);
-
-      if (studentIdsInCourse.length > 0) {
-        const studentBatches: string[][] = [];
-        for (let i = 0; i < studentIdsInCourse.length; i += 30) {
-            studentBatches.push(studentIdsInCourse.slice(i, i + 30));
-        }
+      // Fetch students assigned to the selected class
+      const studentsInClassQuery = query(collection(db, "students"), where("classId", "==", selectedClassId), orderBy("fullName"));
+      const studentsSnapshot = await getDocs(studentsInClassQuery);
+      const classStudents = studentsSnapshot.docs.map(sDoc => ({id: sDoc.id, ...sDoc.data()} as Student));
+      setStudentsInSelectedClass(classStudents);
+      
+      // Fetch grades for the selected subject AND for students specifically in the selected class
+      if (classStudents.length > 0) {
+        const studentIdsInClass = classStudents.map(s => s.id);
         
-        let studentsData: Student[] = [];
-        for (const batch of studentBatches) {
-            if (batch.length > 0) { 
-                const studentsQuery = query(collection(db, "students"), where(documentId(), "in", batch));
-                const studentsSnapshot = await getDocs(studentsQuery);
-                studentsData = studentsData.concat(
-                    studentsSnapshot.docs.map(studentDoc => ({id: studentDoc.id, ...studentDoc.data()} as Student))
+        // Batching for 'in' query if studentIdsInClass.length > 30
+        const studentIdBatches: string[][] = [];
+        for (let i = 0; i < studentIdsInClass.length; i += 30) {
+            studentIdBatches.push(studentIdsInClass.slice(i, i + 30));
+        }
+
+        let fetchedGrades: Grade[] = [];
+        for (const batch of studentIdBatches) {
+            if (batch.length > 0) {
+                 const gradesQuery = query(
+                    collection(db, "grades"), 
+                    where("courseId", "==", selectedSubjectId),
+                    where("studentId", "in", batch),
+                    orderBy("studentName", "asc") // studentName on grade doc is denormalized
                 );
+                const gradesSnapshot = await getDocs(gradesQuery);
+                fetchedGrades = fetchedGrades.concat(gradesSnapshot.docs.map(gDoc => ({ 
+                  id: gDoc.id, ...gDoc.data(),
+                  createdAt: (gDoc.data().createdAt as Timestamp)?.toDate(),
+                  updatedAt: (gDoc.data().updatedAt as Timestamp)?.toDate(),
+                } as Grade)));
             }
         }
-        setEnrolledStudents(studentsData.sort((a, b) => a.fullName.localeCompare(b.fullName)));
-      } else {
-        setEnrolledStudents([]);
+        setGrades(fetchedGrades.sort((a,b) => a.studentName.localeCompare(b.studentName)));
+
+      } else { // No students in the class
+        setGrades([]);
       }
 
     } catch (err: any) {
-      console.error("Error fetching course data: ", err);
-      toast({ title: "Error", description: `Failed to load data for selected course.`, variant: "destructive" });
+      console.error("Error fetching students for class or grades for subject: ", err);
+      toast({ title: "Error", description: `Failed to load student or grade data.`, variant: "destructive" });
+      setGrades([]); // Clear grades on error
+      // setStudentsInSelectedClass([]); // Students might have loaded, but grades failed. Let's not clear students here.
     } finally {
       setIsGradesLoading(false);
     }
-  }, [userProfile, toast]); // Added toast to dependency array
+  }, [selectedClassId, selectedSubjectId, userProfile, toast]);
 
+  // Effect to run when selectedClassId or selectedSubjectId changes
   useEffect(() => {
-    if(selectedCourseId) {
-      fetchCourseData(selectedCourseId);
+    if(selectedClassId && selectedSubjectId) {
+      fetchClassAndGradeData();
     } else {
+      // If either class or subject is not selected, clear relevant data
       setGrades([]); 
-      setEnrolledStudents([]);
+      if (!selectedClassId) { // If class is cleared, clear students too
+          setStudentsInSelectedClass([]);
+      }
       setIsGradesLoading(false);
     }
-  }, [selectedCourseId, fetchCourseData]); // Changed from userProfile to fetchCourseData
+  }, [selectedClassId, selectedSubjectId, fetchClassAndGradeData]);
+
+  // Reset selected subject if class changes, to force re-selection of a subject valid for the new class
+  useEffect(() => {
+    setSelectedSubjectId(null);
+  }, [selectedClassId]);
 
 
   const handleEdit = (grade: Grade) => {
@@ -188,12 +211,12 @@ export default function TeacherGradesPage() {
   };
 
   const handleAddNew = () => {
-    if (!selectedCourseId) {
-        toast({ title: "Select Course", description: "Please select a course before adding a grade.", variant: "default" });
+    if (!selectedClassId || !selectedSubjectId) {
+        toast({ title: "Selection Required", description: "Please select a class and a subject before adding a grade.", variant: "default" });
         return;
     }
-    if (enrolledStudents.length === 0) {
-        toast({ title: "No Students Enrolled", description: "No students are enrolled in this course. Please enroll students first or contact the secretary.", variant: "default" });
+    if (studentsInSelectedClass.length === 0) {
+        toast({ title: "No Students in Class", description: "No students are assigned to this class. Grades cannot be added.", variant: "default" });
         return;
     }
     setEditingGrade(null);
@@ -208,16 +231,21 @@ export default function TeacherGradesPage() {
     try {
       await deleteDoc(doc(db, "grades", grade.id));
       toast({ title: "Grade Deleted", description: `Grade for ${grade.studentName} in ${grade.courseName} deleted.` });
-      if (selectedCourseId) fetchCourseData(selectedCourseId);
+      fetchClassAndGradeData(); // Refetch grades for the current class/subject
     } catch (error: any) {
       console.error("Error deleting grade: ", error);
       toast({ title: "Delete Failed", description: error.message || "Could not delete grade.", variant: "destructive" });
     }
   };
 
+  const currentSubjectForForm = selectedSubjectId ? teacherAssignedSubjects.find(c => c.id === selectedSubjectId) : undefined;
+
   const handleGradeImport = async (data: GradeExcelRow[]): Promise<{ success: boolean; message: string }> => {
-    if (!selectedCourseId || !userProfile || !currentCourseForForm) {
-      return { success: false, message: "Course or user not properly selected/identified." };
+    if (!selectedSubjectId || !userProfile || !currentSubjectForForm || !selectedClassId) {
+      return { success: false, message: "Class, Subject, or user not properly selected/identified." };
+    }
+     if (studentsInSelectedClass.length === 0) {
+      return { success: false, message: "No students in the selected class to import grades for." };
     }
 
     let successCount = 0;
@@ -225,52 +253,60 @@ export default function TeacherGradesPage() {
     const errors: string[] = [];
 
     for (const row of data) {
-      if (!row.studentSystemId || row.studentSystemId.trim() === "") {
+      const studentSystemIdTrimmed = String(row.studentSystemId ?? '').trim();
+      if (!studentSystemIdTrimmed) {
         failCount++;
         errors.push("A grade record was skipped due to missing studentSystemId.");
         continue;
       }
-      const marks = parseFloat(row.marks);
+      const marks = parseFloat(String(row.marks ?? '')); // Ensure marks is a string before parseFloat
       if (isNaN(marks) || marks < 0 || marks > 100) {
         failCount++;
-        errors.push(`Invalid marks for student ID ${row.studentSystemId}: ${row.marks}. Skipped.`);
+        errors.push(`Invalid marks for student ID ${studentSystemIdTrimmed}: '${row.marks}'. Skipped.`);
         continue;
       }
 
-      const student = enrolledStudents.find(s => s.studentSystemId === row.studentSystemId.trim());
+      const student = studentsInSelectedClass.find(s => s.studentSystemId === studentSystemIdTrimmed);
       if (!student) {
         failCount++;
-        errors.push(`Student with ID ${row.studentSystemId} not found or not enrolled in this course. Skipped.`);
+        errors.push(`Student with ID ${studentSystemIdTrimmed} not found in selected class '${allClasses.find(c => c.id === selectedClassId)?.name}'. Skipped.`);
         continue;
       }
 
       const status: 'Pass' | 'Fail' = marks >= PASS_MARK ? 'Pass' : 'Fail';
-      const gradePayload: Partial&lt;Omit&lt;Grade, 'id'&gt;&gt; = {
+      const gradePayload: Partial<Omit<Grade, 'id'>> = {
         studentId: student.id,
         studentName: student.fullName,
-        courseId: currentCourseForForm.id,
-        courseName: `${currentCourseForForm.name} (${currentCourseForForm.code})`,
+        courseId: currentSubjectForForm.id,
+        courseName: `${currentSubjectForForm.name} (${currentSubjectForForm.code})`,
         marks: marks,
         status,
         remarks: row.remarks || "",
+        term: "Term 1", // Default or make configurable via import/UI
         enteredByTeacherId: userProfile.uid,
         enteredByTeacherEmail: userProfile.email || undefined,
         updatedAt: serverTimestamp() as unknown as Date,
       };
 
       try {
-        // Check if grade already exists for this student in this course
         const gradeQuery = query(
           collection(db, "grades"),
           where("studentId", "==", student.id),
-          where("courseId", "==", currentCourseForForm.id)
+          where("courseId", "==", currentSubjectForForm.id)
+          // Consider adding where("term", "==", gradePayload.term) if terms are distinct records
         );
         const gradeSnapshot = await getDocs(gradeQuery);
 
-        if (!gradeSnapshot.empty) { // Grade exists, update it
+        if (!gradeSnapshot.empty) { 
           const existingGradeDoc = gradeSnapshot.docs[0];
+          // Prevent teacher from overwriting admin/other teacher's grade unless they are admin
+          if (existingGradeDoc.data().enteredByTeacherId !== userProfile.uid && userProfile.role !== 'Admin') {
+            failCount++;
+            errors.push(`Grade for ${student.fullName} (ID: ${studentSystemIdTrimmed}) was entered by another user and cannot be overwritten. Skipped.`);
+            continue;
+          }
           await updateDoc(doc(db, "grades", existingGradeDoc.id), gradePayload);
-        } else { // Grade doesn't exist, add new
+        } else { 
           await addDoc(collection(db, "grades"), {
             ...gradePayload,
             createdAt: serverTimestamp() as unknown as Date,
@@ -279,266 +315,271 @@ export default function TeacherGradesPage() {
         successCount++;
       } catch (e: any) {
         failCount++;
-        errors.push(`Error processing grade for ${student.fullName} (ID: ${row.studentSystemId}): ${e.message}`);
+        errors.push(`Error processing grade for ${student.fullName} (ID: ${studentSystemIdTrimmed}): ${e.message}`);
         console.error("Error importing grade row: ", e);
       }
     }
 
-    fetchCourseData(selectedCourseId); // Refresh grade list
+    fetchClassAndGradeData(); 
     
     let message = `${successCount} grade(s) processed successfully.`;
     if (failCount > 0) {
-      message += ` ${failCount} grade(s) failed to process.`;
+      message += ` ${failCount} record(s) failed or skipped.`;
       if (errors.length > 0) {
-        message += ` Errors: ${errors.slice(0, 3).join("; ")}${errors.length > 3 ? '...' : ''}`;
+        message += ` Details: ${errors.slice(0, 3).join("; ")}${errors.length > 3 ? '...' : ''}`;
       }
     }
     return { success: successCount > 0 || (successCount === 0 && failCount === 0), message };
   };
 
-  const currentCourseForForm = selectedCourseId ? assignedCourses.find(c => c.id === selectedCourseId) : undefined;
 
-  if (authLoading || isLoading) {
-    return &lt;div className="flex justify-center items-center h-64"&gt;&lt;Loader2 className="h-12 w-12 animate-spin text-primary" /&gt; &lt;p className="ml-2"&gt;Loading data...&lt;/p&gt;&lt;/div&gt;;
+  if (authLoading || isLoadingInitialData) {
+    return <div className="flex justify-center items-center h-64"><Loader2 className="h-12 w-12 animate-spin text-primary" /> <p className="ml-2 text-muted-foreground">Loading page data...</p></div>;
+  }
+  if (!userProfile) { // Should be caught by layout, but as a fallback
+    return <div className="flex justify-center items-center h-64"><AlertTriangle className="h-12 w-12 text-destructive" /> <p className="ml-2 text-destructive-foreground">User not authenticated.</p></div>;
   }
 
+
   return (
-    &lt;React.Fragment&gt;
-      &lt;TooltipProvider&gt;
-      &lt;div className="container mx-auto py-8"&gt;
-        &lt;div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8 gap-4"&gt;
-          &lt;h1 className="text-3xl font-bold tracking-tight text-foreground"&gt;Manage Student Grades&lt;/h1&gt;
-          &lt;div className="flex flex-col sm:flex-row items-center gap-2 w-full md:w-auto"&gt;
-              &lt;Select 
-                  onValueChange={(value) =&gt; setSelectedCourseId(value)} 
-                  value={selectedCourseId || ""}
-                  disabled={assignedCourses.length === 0 || isGradesLoading}
-              &gt;
-                  &lt;SelectTrigger className="w-full sm:min-w-[280px]"&gt;
-                      &lt;SelectValue placeholder={assignedCourses.length === 0 ? "No courses assigned" : "Select a course"} /&gt;
-                  &lt;/SelectTrigger&gt;
-                  &lt;SelectContent&gt;
-                      {assignedCourses.length === 0 &amp;&amp; &lt;SelectItem value="no-courses-placeholder" disabled&gt;No courses assigned to you&lt;/SelectItem&gt;}
-                      {assignedCourses.map(course =&gt; (
-                          &lt;SelectItem key={course.id} value={course.id}&gt;
-                              {course.name} ({course.code})
-                          &lt;/SelectItem&gt;
-                      ))}
-                  &lt;/SelectContent&gt;
-              &lt;/Select&gt;
-              &lt;Button 
-                onClick={() =&gt; setIsImportGradesDialogOpen(true)} 
+    <React.Fragment>
+      <TooltipProvider>
+      <div className="container mx-auto py-8">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8 gap-4">
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">Manage Student Grades</h1>
+          <div className="flex flex-col sm:flex-row items-center gap-2 w-full md:w-auto">
+            {/* Class Selector */}
+            <Select 
+                onValueChange={(value) => { setSelectedClassId(value); setSelectedSubjectId(null); /* Reset subject when class changes */ }} 
+                value={selectedClassId || ""}
+                disabled={allClasses.length === 0 || isGradesLoading} // isGradesLoading refers to specific class/subject grades
+            >
+                <SelectTrigger className="w-full sm:min-w-[200px]">
+                    <SelectValue placeholder={allClasses.length === 0 ? "No classes available" : "Select a Class"} />
+                </SelectTrigger>
+                <SelectContent>
+                    {allClasses.length === 0 && <SelectItem value="no-classes-placeholder" disabled>No classes found</SelectItem>}
+                    {allClasses.map(cls => (
+                        <SelectItem key={cls.id} value={cls.id}>
+                            {cls.name}
+                        </SelectItem>
+                    ))}
+                </SelectContent>
+            </Select>
+
+            {/* Subject Selector (dynamically populated) */}
+            <Select 
+                onValueChange={setSelectedSubjectId} 
+                value={selectedSubjectId || ""}
+                disabled={!selectedClassId || availableSubjectsForSelectedClass.length === 0 || isGradesLoading}
+            >
+                <SelectTrigger className="w-full sm:min-w-[280px]">
+                    <SelectValue placeholder={!selectedClassId ? "Select class first" : (availableSubjectsForSelectedClass.length === 0 ? "No subjects for this class" : "Select a Subject")} />
+                </SelectTrigger>
+                <SelectContent>
+                    {!selectedClassId && <SelectItem value="select-class-placeholder" disabled>Select class first</SelectItem>}
+                    {selectedClassId && availableSubjectsForSelectedClass.length === 0 && <SelectItem value="no-subjects-placeholder" disabled>No assigned subjects for this class</SelectItem>}
+                    {availableSubjectsForSelectedClass.map(subject => (
+                        <SelectItem key={subject.id} value={subject.id}>
+                            {subject.name} ({subject.code})
+                        </SelectItem>
+                    ))}
+                </SelectContent>
+            </Select>
+              <Button 
+                onClick={() => setIsImportGradesDialogOpen(true)} 
                 variant="outline" 
                 className="w-full sm:w-auto"
-                disabled={!selectedCourseId || isGradesLoading || enrolledStudents.length === 0}
-              &gt;
-                &lt;UploadCloud className="mr-2 h-5 w-5" /&gt; Import Grades
-              &lt;/Button&gt;
-              &lt;Dialog open={isFormOpen} onOpenChange={setIsFormOpen}&gt;
-                &lt;DialogTrigger asChild&gt;
-                  &lt;Button onClick={handleAddNew} className="bg-accent hover:bg-accent/90 w-full sm:w-auto" disabled={!selectedCourseId || isGradesLoading || enrolledStudents.length === 0}&gt;
-                    &lt;PlusCircle className="mr-2 h-5 w-5" /&gt; Add New Grade
-                  &lt;/Button&gt;
-                &lt;/DialogTrigger&gt;
-                &lt;DialogContent className="sm:max-w-lg bg-card"&gt;
-                  &lt;DialogHeader&gt;
-                    &lt;DialogTitle className="text-xl"&gt;{editingGrade ? "Edit Grade" : "Add New Grade"}&lt;/DialogTitle&gt;
-                    &lt;DialogDescription&gt;
-                      {editingGrade ? "Update student's grade." : `Enter student's grade for ${currentCourseForForm?.name || 'selected course'}.`}
-                    &lt;/DialogDescription&gt;
-                  &lt;/DialogHeader&gt;
-                  {currentCourseForForm &amp;&amp; (
-                    &lt;GradeForm 
+                disabled={!selectedClassId || !selectedSubjectId || isGradesLoading || studentsInSelectedClass.length === 0}
+              >
+                <UploadCloud className="mr-2 h-5 w-5" /> Import Grades
+              </Button>
+              <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+                <DialogTrigger asChild>
+                  <Button onClick={handleAddNew} className="bg-accent hover:bg-accent/90 w-full sm:w-auto" disabled={!selectedClassId || !selectedSubjectId || isGradesLoading || studentsInSelectedClass.length === 0}>
+                    <PlusCircle className="mr-2 h-5 w-5" /> Add New Grade
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-lg bg-card">
+                  <DialogHeader>
+                    <DialogTitle className="text-xl">{editingGrade ? "Edit Grade" : "Add New Grade"}</DialogTitle>
+                    <DialogDescription>
+                      {editingGrade ? "Update student's grade." : `Enter student's grade for ${currentSubjectForForm?.name || 'selected subject'} in class ${allClasses.find(c=>c.id===selectedClassId)?.name || ''}.`}
+                    </DialogDescription>
+                  </DialogHeader>
+                  {currentSubjectForForm && selectedClassId && ( // Ensure currentSubjectForForm and selectedClassId are available
+                    <GradeForm 
                       initialData={editingGrade}
-                      course={currentCourseForForm} 
-                      students={enrolledStudents} 
-                      onClose={() =&gt; {
+                      course={currentSubjectForForm} // This is actually the subject
+                      students={studentsInSelectedClass} 
+                      onClose={() => {
                         setIsFormOpen(false);
                         setEditingGrade(null);
-                        if (selectedCourseId) fetchCourseData(selectedCourseId);
+                        fetchClassAndGradeData(); // Refetch data for current class/subject
                       }} 
-                    /&gt;
+                    />
                   )}
-                &lt;/DialogContent&gt;
-              &lt;/Dialog&gt;
-          &lt;/div&gt;
-        &lt;/div&gt;
+                </DialogContent>
+              </Dialog>
+          </div>
+        </div>
 
-        &lt;ExcelImportDialog&lt;GradeExcelRow&gt;
+        <ExcelImportDialog<GradeExcelRow>
             isOpen={isImportGradesDialogOpen}
-            onClose={() =&gt; setIsImportGradesDialogOpen(false)}
+            onClose={() => setIsImportGradesDialogOpen(false)}
             onImport={handleGradeImport}
             templateHeaders={["studentSystemId", "marks", "remarks"]}
-            templateFileName={`grades_template_${currentCourseForForm?.code || 'course'}.xlsx`}
-            dialogTitle={`Import Grades for ${currentCourseForForm?.name || 'Selected Course'}`}
-            dialogDescription="Upload an Excel file with student grades. Required headers: studentSystemId, marks. Optional: remarks. Student System IDs must match enrolled students."
-        /&gt;
+            templateFileName={`grades_template_${currentSubjectForForm?.code || 'subject'}_${allClasses.find(c=>c.id===selectedClassId)?.name.replace(/\s+/g, '_') || 'class'}.xlsx`}
+            dialogTitle={`Import Grades for ${currentSubjectForForm?.name || 'Selected Subject'} in ${allClasses.find(c=>c.id===selectedClassId)?.name || 'Selected Class'}`}
+            dialogDescription="Upload Excel. Required headers: studentSystemId, marks. Optional: remarks. Student System IDs must match students enrolled in the selected class."
+        />
 
-
-        {isGradesLoading &amp;&amp; selectedCourseId &amp;&amp; (
-          &lt;div className="flex justify-center items-center h-64"&gt;
-            &lt;Loader2 className="h-12 w-12 animate-spin text-primary" /&gt;
-            &lt;p className="ml-4 text-lg text-muted-foreground"&gt;Loading data for selected course...&lt;/p&gt;
-          &lt;/div&gt;
+        {isGradesLoading && selectedClassId && selectedSubjectId && (
+          <div className="flex justify-center items-center h-64">
+            <Loader2 className="h-12 w-12 animate-spin text-primary" />
+            <p className="ml-4 text-lg text-muted-foreground">Loading grades data...</p>
+          </div>
         )}
 
-        {!isGradesLoading &amp;&amp; !selectedCourseId &amp;&amp; assignedCourses.length &gt; 0 &amp;&amp; (
-          &lt;Card className="text-center py-12"&gt;
-              &lt;CardHeader&gt;
-                  &lt;div className="mx-auto bg-secondary rounded-full p-3 w-fit"&gt;
-                  &lt;Info className="h-12 w-12 text-muted-foreground" data-ai-hint="information select"/&gt;
-                  &lt;/div&gt;
-                  &lt;CardTitle className="mt-4 text-2xl"&gt;Select a Course&lt;/CardTitle&gt;
-                  &lt;CardDescription&gt;Please select one of your assigned courses above to view or manage grades.&lt;/CardDescription&gt;
-              &lt;/CardHeader&gt;
-          &lt;/Card&gt;
-        )}
-
-        {!isLoading &amp;&amp; assignedCourses.length === 0 &amp;&amp; !authLoading &amp;&amp; (
-          &lt;Card className="text-center py-12"&gt;
-              &lt;CardHeader&gt;
-                  &lt;div className="mx-auto bg-secondary rounded-full p-3 w-fit"&gt;
-                  &lt;BookOpen className="h-12 w-12 text-muted-foreground" data-ai-hint="book empty"/&gt;
-                  &lt;/div&gt;
-                  &lt;CardTitle className="mt-4 text-2xl"&gt;No Courses Assigned&lt;/CardTitle&gt;
-                  &lt;CardDescription&gt;You are not assigned to any courses. Please contact an administrator.&lt;/CardDescription&gt;
-                  &lt;CardContent className="mt-4"&gt;
-                      &lt;Link href="/teacher/dashboard"&gt;
-                          &lt;Button variant="outline"&gt;Back to Dashboard&lt;/Button&gt;
-                      &lt;/Link&gt;
-                  &lt;/CardContent&gt;
-              &lt;/CardHeader&gt;
-          &lt;/Card&gt;
+        {!isGradesLoading && (!selectedClassId || !selectedSubjectId) && (
+          <Card className="text-center py-12">
+              <CardHeader>
+                  <div className="mx-auto bg-secondary rounded-full p-3 w-fit">
+                  <Filter className="h-12 w-12 text-muted-foreground" data-ai-hint="filter selection"/>
+                  </div>
+                  <CardTitle className="mt-4 text-2xl">Select Class and Subject</CardTitle>
+                  <CardDescription>Please select a class and then one of your assigned subjects for that class to view or manage grades.</CardDescription>
+              </CardHeader>
+          </Card>
         )}
         
-        {/* This handles "course selected, but no students enrolled" */}
-        {!isGradesLoading &amp;&amp; selectedCourseId &amp;&amp; enrolledStudents.length === 0 &amp;&amp; (
-          &lt;Card className="text-center py-12"&gt;
-            &lt;CardHeader&gt;
-              &lt;div className="mx-auto bg-secondary rounded-full p-3 w-fit"&gt;
-              &lt;Users className="h-12 w-12 text-muted-foreground" data-ai-hint="users empty"/&gt;
-              &lt;/div&gt;
-              &lt;CardTitle className="mt-4 text-2xl"&gt;No Students Enrolled&lt;/CardTitle&gt;
-              &lt;CardDescription&gt;
-                No students are currently enrolled in {assignedCourses.find(c =&gt; c.id === selectedCourseId)?.name || 'this course'}.
-                A secretary needs to enroll students first.
-              &lt;/CardDescription&gt;
-            &lt;/CardHeader&gt;
-          &lt;/Card&gt;
+        {!isGradesLoading && selectedClassId && selectedSubjectId && studentsInSelectedClass.length === 0 && (
+          <Card className="text-center py-12">
+            <CardHeader>
+              <div className="mx-auto bg-secondary rounded-full p-3 w-fit">
+              <Users className="h-12 w-12 text-muted-foreground" data-ai-hint="users empty"/>
+              </div>
+              <CardTitle className="mt-4 text-2xl">No Students in Class</CardTitle>
+              <CardDescription>
+                No students are currently assigned to the class: {allClasses.find(c => c.id === selectedClassId)?.name || 'this class'}.
+                A secretary needs to assign students to this class first.
+              </CardDescription>
+            </CardHeader>
+          </Card>
         )}
 
-        {/* This handles "course selected, students enrolled, but no grades yet" */}
-        {!isGradesLoading &amp;&amp; selectedCourseId &amp;&amp; grades.length === 0 &amp;&amp; enrolledStudents.length &gt; 0 &amp;&amp; (
-          &lt;Card className="text-center py-12"&gt;
-            &lt;CardHeader&gt;
-              &lt;div className="mx-auto bg-secondary rounded-full p-3 w-fit"&gt;
-              &lt;ClipboardList className="h-12 w-12 text-muted-foreground" data-ai-hint="list empty"/&gt;
-              &lt;/div&gt;
-              &lt;CardTitle className="mt-4 text-2xl"&gt;No Grades Found&lt;/CardTitle&gt;
-              &lt;CardDescription&gt;
-                Start by adding grades for students in {assignedCourses.find(c =&gt; c.id === selectedCourseId)?.name || 'this course'}.
-              &lt;/CardDescription&gt;
-            &lt;/CardHeader&gt;
-          &lt;/Card&gt;
+        {!isGradesLoading && selectedClassId && selectedSubjectId && grades.length === 0 && studentsInSelectedClass.length > 0 && (
+          <Card className="text-center py-12">
+            <CardHeader>
+              <div className="mx-auto bg-secondary rounded-full p-3 w-fit">
+              <ClipboardList className="h-12 w-12 text-muted-foreground" data-ai-hint="list empty"/>
+              </div>
+              <CardTitle className="mt-4 text-2xl">No Grades Found</CardTitle>
+              <CardDescription>
+                Start by adding grades for students in {currentSubjectForForm?.name || 'this subject'} for class {allClasses.find(c => c.id === selectedClassId)?.name || ''}.
+              </CardDescription>
+            </CardHeader>
+          </Card>
         )}
 
-        {!isGradesLoading &amp;&amp; selectedCourseId &amp;&amp; grades.length &gt; 0 &amp;&amp; enrolledStudents.length &gt; 0 &amp;&amp; (
-          &lt;Card&gt;
-            &lt;CardHeader&gt;
-              &lt;CardTitle&gt;Grades for: {assignedCourses.find(c =&gt; c.id === selectedCourseId)?.name || 'Selected Course'}&lt;/CardTitle&gt;
-              &lt;CardDescription&gt;A list of student grades for this course. You can add, edit, or delete grades you entered.&lt;/CardDescription&gt;
-            &lt;/CardHeader&gt;
-            &lt;CardContent&gt;
-              &lt;ScrollArea className="h-[calc(100vh-28rem)]"&gt; 
-                &lt;Table&gt;
-                  &lt;TableHeader&gt;
-                    &lt;TableRow&gt;
-                      &lt;TableHead className="w-[200px]"&gt;Student Name&lt;/TableHead&gt;
-                      &lt;TableHead&gt;Student ID&lt;/TableHead&gt;
-                      &lt;TableHead className="text-center"&gt;Marks&lt;/TableHead&gt;
-                      &lt;TableHead className="text-center"&gt;Status&lt;/TableHead&gt;
-                      &lt;TableHead&gt;Remarks&lt;/TableHead&gt;
-                      &lt;TableHead className="text-center"&gt;Entered By&lt;/TableHead&gt;
-                      &lt;TableHead className="text-right"&gt;Actions&lt;/TableHead&gt;
-                    &lt;/TableRow&gt;
-                  &lt;/TableHeader&gt;
-                  &lt;TableBody&gt;
-                    {grades.map((grade) =&gt; {
-                        const studentDetails = enrolledStudents.find(s =&gt; s.id === grade.studentId);
+        {!isGradesLoading && selectedClassId && selectedSubjectId && grades.length > 0 && studentsInSelectedClass.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Grades for: {currentSubjectForForm?.name} ({currentSubjectForForm?.code}) - Class: {allClasses.find(c => c.id === selectedClassId)?.name}</CardTitle>
+              <CardDescription>A list of student grades for this subject in the selected class. You can add, edit, or delete grades you entered.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ScrollArea className="h-[calc(100vh-30rem)]"> 
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-[200px]">Student Name</TableHead>
+                      <TableHead>Student ID</TableHead>
+                      <TableHead className="text-center">Marks</TableHead>
+                      <TableHead className="text-center">Status</TableHead>
+                      <TableHead>Remarks</TableHead>
+                      <TableHead className="text-center">Entered By</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {grades.map((grade) => {
+                        const studentDetails = studentsInSelectedClass.find(s => s.id === grade.studentId);
+                        const canModify = grade.enteredByTeacherId === userProfile?.uid || userProfile?.role === 'Admin';
                         return (
-                          &lt;TableRow key={grade.id}&gt;
-                            &lt;TableCell className="font-medium"&gt;{grade.studentName}&lt;/TableCell&gt;
-                            &lt;TableCell&gt;{studentDetails?.studentSystemId || 'N/A'}&lt;/TableCell&gt;
-                            &lt;TableCell className="text-center"&gt;{grade.marks}&lt;/TableCell&gt;
-                            &lt;TableCell className="text-center"&gt;
-                              &lt;Badge variant={grade.status === 'Pass' ? 'default' : 'destructive'} 
-                                    className={grade.status === 'Pass' ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'}&gt;
+                          <TableRow key={grade.id}>
+                            <TableCell className="font-medium">{grade.studentName}</TableCell>
+                            <TableCell>{studentDetails?.studentSystemId || 'N/A'}</TableCell>
+                            <TableCell className="text-center">{grade.marks}</TableCell>
+                            <TableCell className="text-center">
+                              <Badge variant={grade.status === 'Pass' ? 'default' : 'destructive'} 
+                                    className={grade.status === 'Pass' ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'}>
                                 {grade.status}
-                              &lt;/Badge&gt;
-                            &lt;/TableCell&gt;
-                            &lt;TableCell className="max-w-[200px] truncate" title={grade.remarks || undefined}&gt;{grade.remarks || "-"}&lt;/TableCell&gt;
-                            &lt;TableCell className="text-center"&gt;
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="max-w-[200px] truncate" title={grade.remarks || undefined}>{grade.remarks || "-"}</TableCell>
+                            <TableCell className="text-center">
                               {grade.enteredByTeacherEmail ? (
-                                &lt;Tooltip&gt;
-                                  &lt;TooltipTrigger asChild&gt;
-                                      &lt;span className="truncate cursor-default"&gt;{grade.enteredByTeacherEmail.split('@')[0]}&lt;/span&gt;
-                                  &lt;/TooltipTrigger&gt;
-                                  &lt;TooltipContent&gt;
-                                      &lt;p&gt;{grade.enteredByTeacherEmail}&lt;/p&gt;
-                                  &lt;/TooltipContent&gt;
-                                &lt;/Tooltip&gt;
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                      <span className="truncate cursor-default">{grade.enteredByTeacherEmail.split('@')[0]}</span>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                      <p>{grade.enteredByTeacherEmail}</p>
+                                  </TooltipContent>
+                                </Tooltip>
                               ) : (
-                                &lt;Tooltip&gt;
-                                  &lt;TooltipTrigger asChild&gt;&lt;User className="h-4 w-4 mx-auto text-muted-foreground" /&gt;&lt;/TooltipTrigger&gt;
-                                  &lt;TooltipContent&gt;&lt;p&gt;Admin/System Entry&lt;/p&gt;&lt;/TooltipContent&gt;
-                                &lt;/Tooltip&gt;
+                                <Tooltip>
+                                  <TooltipTrigger asChild><User className="h-4 w-4 mx-auto text-muted-foreground" /></TooltipTrigger>
+                                  <TooltipContent><p>Admin/System Entry</p></TooltipContent>
+                                </Tooltip>
                               )}
-                            &lt;/TableCell&gt;
-                            &lt;TableCell className="text-right"&gt;
-                              &lt;div className="flex justify-end gap-2"&gt;
-                                {(grade.enteredByTeacherId === userProfile?.uid || userProfile?.role === 'Admin') &amp;&amp; (
-                                  &lt;&gt;
-                                    &lt;Button variant="outline" size="icon" className="h-8 w-8" onClick={() =&gt; handleEdit(grade)}&gt;
-                                      &lt;Edit3 className="h-4 w-4" /&gt;
-                                      &lt;span className="sr-only"&gt;Edit&lt;/span&gt;
-                                    &lt;/Button&gt;
-                                    &lt;AlertDialog&gt;
-                                      &lt;AlertDialogTrigger asChild&gt;
-                                        &lt;Button variant="destructive" size="icon" className="h-8 w-8"&gt;
-                                          &lt;Trash2 className="h-4 w-4" /&gt;
-                                          &lt;span className="sr-only"&gt;Delete&lt;/span&gt;
-                                        &lt;/Button&gt;
-                                      &lt;/AlertDialogTrigger&gt;
-                                      &lt;AlertDialogContent&gt;
-                                        &lt;AlertDialogHeader&gt;
-                                          &lt;AlertDialogTitle&gt;Are you sure?&lt;/AlertDialogTitle&gt;
-                                          &lt;AlertDialogDescription&gt;
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex justify-end gap-2">
+                                {canModify && (
+                                  <>
+                                    <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => handleEdit(grade)}>
+                                      <Edit3 className="h-4 w-4" />
+                                      <span className="sr-only">Edit</span>
+                                    </Button>
+                                    <AlertDialog>
+                                      <AlertDialogTrigger asChild>
+                                        <Button variant="destructive" size="icon" className="h-8 w-8">
+                                          <Trash2 className="h-4 w-4" />
+                                          <span className="sr-only">Delete</span>
+                                        </Button>
+                                      </AlertDialogTrigger>
+                                      <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                          <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                          <AlertDialogDescription>
                                             This action will permanently delete the grade for {grade.studentName} in {grade.courseName}.
-                                          &lt;/AlertDialogDescription&gt;
-                                        &lt;/AlertDialogHeader&gt;
-                                        &lt;AlertDialogFooter&gt;
-                                          &lt;AlertDialogCancel&gt;Cancel&lt;/AlertDialogCancel&gt;
-                                          &lt;AlertDialogAction onClick={() =&gt; handleDelete(grade)} className="bg-destructive hover:bg-destructive/90"&gt;
+                                          </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                          <AlertDialogAction onClick={() => handleDelete(grade)} className="bg-destructive hover:bg-destructive/90">
                                             Delete
-                                          &lt;/AlertDialogAction&gt;
-                                        &lt;/AlertDialogFooter&gt;
-                                      &lt;/AlertDialogContent&gt;
-                                    &lt;/AlertDialog&gt;
-                                  &lt;/&gt;
+                                          </AlertDialogAction>
+                                        </AlertDialogFooter>
+                                      </AlertDialogContent>
+                                    </AlertDialog>
+                                  </>
                                 )}
-                              &lt;/div&gt;
-                            &lt;/TableCell&gt;
-                          &lt;/TableRow&gt;
+                              </div>
+                            </TableCell>
+                          </TableRow>
                         );
                       })}
-                  &lt;/TableBody&gt;
-                &lt;/Table&gt;
-              &lt;/ScrollArea&gt;
-            &lt;/CardContent&gt;
-          &lt;/Card&gt;
+                  </TableBody>
+                </Table>
+              </ScrollArea>
+            </CardContent>
+          </Card>
         )}
-      &lt;/div&gt;
-      &lt;/TooltipProvider&gt;
-    &lt;/React.Fragment&gt;
+      </div>
+      </TooltipProvider>
+    </React.Fragment>
   );
 }

@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState } from "react";
@@ -49,7 +48,7 @@ interface ReportData {
   totalSubjects: number; // Renamed from totalCourses
 }
 
-const PASS_MARK = 40; 
+const PASS_MARK = 50; // Changed from 40 to 50
 
 export default function ReportsPage() {
   const [reportData, setReportData] = useState<ReportData | null>(null);
@@ -111,7 +110,7 @@ export default function ReportsPage() {
     if (grades.length > 0) {
       grades.forEach(grade => {
         totalMarks += grade.marks;
-        if (grade.status === 'Pass') passCountOverall++;
+        if (grade.status === 'Pass') passCountOverall++; // Status is already set based on PASS_MARK in GradeForm
         if (highestMarkOverall === null || grade.marks > highestMarkOverall) highestMarkOverall = grade.marks;
         if (lowestMarkOverall === null || grade.marks < lowestMarkOverall) lowestMarkOverall = grade.marks;
       });
@@ -429,11 +428,11 @@ export default function ReportsPage() {
                     <TableCell className="text-center">{formatNumber(subject.averageMarks)}%</TableCell>
                     <TableCell className="text-center">
                        {subject.passRate !== null ? (
-                        <Badge variant={subject.passRate >= PASS_MARK ? 'default' : (subject.totalStudentsGradedInSubject > 0 ? 'destructive' : 'secondary')}
+                        <Badge variant={subject.totalStudentsGradedInSubject === 0 ? 'secondary' : (subject.passRate >= PASS_MARK ? 'default' : 'destructive')}
                                className={
                                 subject.totalStudentsGradedInSubject === 0 ? 'bg-muted text-muted-foreground hover:bg-muted' :
-                                subject.passRate >= PASS_MARK ? 'bg-green-500 hover:bg-green-600' 
-                                : 'bg-red-500 hover:bg-red-600'
+                                (subject.passRate >= PASS_MARK ? 'bg-green-500 hover:bg-green-600' 
+                                : 'bg-red-500 hover:bg-red-600')
                                }>
                             {subject.totalStudentsGradedInSubject === 0 ? 'N/A' : `${formatNumber(subject.passRate)}%`}
                         </Badge>
