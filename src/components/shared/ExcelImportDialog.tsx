@@ -113,6 +113,11 @@ export function ExcelImportDialog<T>({
       } finally {
         setIsLoading(false);
         setFile(null); 
+        // Reset file input visually
+        const fileInput = document.getElementById('excel-file') as HTMLInputElement;
+        if (fileInput) {
+          fileInput.value = '';
+        }
       }
     };
     reader.readAsBinaryString(file);
@@ -126,7 +131,7 @@ export function ExcelImportDialog<T>({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) { setFile(null); onClose();} }}>
       <DialogContent className="sm:max-w-md bg-card">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -157,7 +162,7 @@ export function ExcelImportDialog<T>({
             Import Data
           </Button>
           <DialogClose asChild>
-            <Button type="button" variant="secondary" className="w-full sm:w-auto">
+            <Button type="button" variant="secondary" className="w-full sm:w-auto" onClick={() => setFile(null)}>
               Cancel
             </Button>
           </DialogClose>
