@@ -1,3 +1,4 @@
+
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -81,12 +82,24 @@ export function StudentForm({ initialData, onClose }: StudentFormProps) {
   const onSubmit = async (values: StudentFormValues) => {
     setIsLoading(true);
     
-    const studentData: Partial<Omit<Student, 'id' | 'createdAt' | 'updatedAt'>> & { updatedAt: FieldValue, classId?: string | FieldValue, className?: string | FieldValue } = {
+    const studentData: Partial<Omit<Student, 'id' | 'createdAt' | 'updatedAt'>> & { updatedAt: FieldValue, studentSystemId?: string | FieldValue, email?: string | FieldValue, classId?: string | FieldValue, className?: string | FieldValue } = {
         fullName: values.fullName,
-        studentSystemId: values.studentSystemId || "",
-        email: values.email || "",
         updatedAt: serverTimestamp(),
     };
+
+    // Handle optional fields: only include them if they have a value.
+    if (values.studentSystemId && values.studentSystemId.trim() !== "") {
+        studentData.studentSystemId = values.studentSystemId.trim();
+    } else if (initialData?.id) { // If editing and field is cleared, remove it
+        studentData.studentSystemId = deleteField();
+    }
+
+    if (values.email && values.email.trim() !== "") {
+        studentData.email = values.email.trim();
+    } else if (initialData?.id) { // If editing and field is cleared, remove it
+        studentData.email = deleteField();
+    }
+    
 
     if (values.classId && values.classId !== NONE_CLASS_VALUE) {
       const selectedClass = classes.find(c => c.id === values.classId);
@@ -98,21 +111,24 @@ export function StudentForm({ initialData, onClose }: StudentFormProps) {
       studentData.className = deleteField();
     }
     
-    // Ensure empty strings are not saved for optional fields, prefer undefined or deleteField
-    if (!studentData.studentSystemId) delete studentData.studentSystemId;
-    if (!studentData.email) delete studentData.email;
-
-
     try {
       if (initialData) {
         const studentRef = doc(db, "students", initialData.id);
         await updateDoc(studentRef, studentData);
         toast({ title: "Student Updated", description: `Student "${values.fullName}" has been successfully updated.` });
       } else {
-        await addDoc(collection(db, "students"), {
-          ...studentData,
-          createdAt: serverTimestamp(),
-        });
+        // For new students, add createdAt timestamp
+        const dataForAdd = {
+            ...studentData,
+            createdAt: serverTimestamp(),
+        };
+        // Remove fields that should be undefined if not set, rather than empty string from deleteField()
+        if(dataForAdd.studentSystemId === undefined) delete dataForAdd.studentSystemId;
+        if(dataForAdd.email === undefined) delete dataForAdd.email;
+        if(dataForAdd.classId === undefined) delete dataForAdd.classId;
+        if(dataForAdd.className === undefined) delete dataForAdd.className;
+
+        await addDoc(collection(db, "students"), dataForAdd);
         toast({ title: "Student Added", description: `Student "${values.fullName}" has been successfully added.` });
       }
       router.refresh(); 
