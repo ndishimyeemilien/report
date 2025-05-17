@@ -1,3 +1,4 @@
+
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -79,10 +80,18 @@ export function LoginForm() {
          await auth.signOut(); // Sign out user as profile is missing
       }
     } catch (error: any) {
-      console.error("Login error:", error);
+      console.error("Login error:", error); // For developer debugging
+      let description = "An unexpected error occurred. Please try again.";
+      if (error.code === 'auth/invalid-credential' || 
+          error.code === 'auth/wrong-password' || 
+          error.code === 'auth/user-not-found') {
+        description = "Invalid email or password. Please check your credentials and try again.";
+      } else if (error.message) {
+        description = error.message;
+      }
       toast({
         title: "Login Failed",
-        description: error.message || "An unexpected error occurred. Please try again.",
+        description: description,
         variant: "destructive",
       });
     } finally {
@@ -148,4 +157,3 @@ export function LoginForm() {
     </Form>
   );
 }
-
