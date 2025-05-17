@@ -1,3 +1,4 @@
+
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -95,9 +96,13 @@ export function RegisterForm() {
       router.push("/login");
     } catch (error: any) {
       console.error("Registration error:", error);
+      let errorMessage = error.message || "An unexpected error occurred. Please try again.";
+      if (error.code === 'auth/email-already-in-use') {
+        errorMessage = "This email address is already in use by another account.";
+      }
       toast({
         title: "Registration Failed",
-        description: error.message || "An unexpected error occurred. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -228,3 +233,4 @@ export function RegisterForm() {
     </Form>
   );
 }
+
