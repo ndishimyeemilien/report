@@ -68,7 +68,7 @@ export function LoginForm() {
         }
          else {
           // Fallback if role is not defined or unexpected
-          router.push("/"); 
+          router.push("/");
         }
       } else {
         // Should not happen if registration creates user doc, but handle defensively
@@ -80,14 +80,19 @@ export function LoginForm() {
          await auth.signOut(); // Sign out user as profile is missing
       }
     } catch (error: any) {
-      console.error("Login error:", error); // For developer debugging
       let description = "An unexpected error occurred. Please try again.";
-      if (error.code === 'auth/invalid-credential' || 
-          error.code === 'auth/wrong-password' || 
+      if (error.code === 'auth/invalid-credential' ||
+          error.code === 'auth/wrong-password' ||
           error.code === 'auth/user-not-found') {
+        // Log common auth errors as warnings for less console noise
+        console.warn(`Login attempt failed for email ${values.email}: ${error.code}`);
         description = "Invalid email or password. Please check your credentials and try again.";
-      } else if (error.message) {
-        description = error.message;
+      } else {
+        // Log other, potentially more critical errors as errors
+        console.error("Login error (unexpected):", error);
+        if (error.message) {
+            description = error.message;
+        }
       }
       toast({
         title: "Login Failed",
@@ -123,10 +128,10 @@ export function LoginForm() {
               <FormLabel>Password</FormLabel>
               <FormControl>
                 <div className="relative">
-                  <Input 
+                  <Input
                     type={showPassword ? "text" : "password"}
-                    placeholder="••••••••" 
-                    {...field} 
+                    placeholder="••••••••"
+                    {...field}
                   />
                   <Button
                     type="button"
