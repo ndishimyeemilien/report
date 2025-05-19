@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -9,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from "@/components/ui/chart";
 import { BarChart as RechartsBarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip as RechartsTooltip, Legend as RechartsLegend } from "recharts";
-import { Loader2, AlertTriangle, BarChart3, Percent, CheckCircle, XCircle, TrendingUp, TrendingDown, ListChecks, FileSpreadsheet, Users, BookOpen } from "lucide-react";
+import { Loader2, AlertTriangle, BarChart3, Percent, CheckCircle, XCircle, TrendingUp, TrendingDown, ListChecks, FileSpreadsheet, Users, BookOpen, Download } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -49,6 +50,49 @@ interface ReportData {
 }
 
 const PASS_MARK = 50; // Changed from 40 to 50
+
+// CSV export function for subject performance
+const exportSubjectPerformanceToCSV = (subjectPerformanceData: ReportData['subjectPerformance']) => {
+  if (subjectPerformanceData.length === 0) {
+    alert("No subject performance data to export.");
+    return;
+  }
+  const headers = [
+    "Subject Name", "Subject Code", "Category", "Combination", "Teacher", 
+    "Enrolled Students", "Graded Students", "Average Marks (%)", 
+    "Pass Count", "Fail Count", "Pass Rate (%)", 
+    "Highest Mark", "Lowest Mark"
+  ];
+  
+  const rows = subjectPerformanceData.map(sp => [
+    sp.subjectName,
+    sp.subjectCode,
+    sp.category,
+    sp.combination,
+    sp.teacherName || "N/A",
+    sp.totalStudentsEnrolled,
+    sp.totalStudentsGradedInSubject,
+    sp.averageMarks !== null ? sp.averageMarks.toFixed(1) : "N/A",
+    sp.passCount,
+    sp.failCount,
+    sp.passRate !== null ? sp.passRate.toFixed(1) : "N/A",
+    sp.highestMark !== null ? sp.highestMark : "N/A",
+    sp.lowestMark !== null ? sp.lowestMark : "N/A",
+  ]);
+
+  let csvContent = "data:text/csv;charset=utf-8," 
+    + headers.join(",") + "\n" 
+    + rows.map(e => e.map(field => `"${String(field).replace(/"/g, '""')}"`).join(",")).join("\n"); // Handle commas in fields
+
+  const encodedUri = encodeURI(csvContent);
+  const link = document.createElement("a");
+  link.setAttribute("href", encodedUri);
+  link.setAttribute("download", "subject_performance_report.csv");
+  document.body.appendChild(link); 
+  link.click();
+  document.body.removeChild(link);
+};
+
 
 export default function ReportsPage() {
   const [reportData, setReportData] = useState<ReportData | null>(null);
@@ -276,6 +320,13 @@ export default function ReportsPage() {
     <div className="container mx-auto py-8">
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-3xl font-bold tracking-tight text-foreground">Academic Reports</h1>
+        <Button 
+          variant="outline" 
+          onClick={() => exportSubjectPerformanceToCSV(reportData.subjectPerformance)} 
+          disabled={reportData.subjectPerformance.length === 0 || isLoading}
+        >
+          <Download className="mr-2 h-5 w-5" /> Export Subject Performance
+        </Button>
       </div>
 
       {reportData.overallStats.totalGradeEntries === 0 && reportData.overallStats.totalRegisteredStudents > 0 ? (
@@ -458,3 +509,4 @@ export default function ReportsPage() {
     </div>
   );
 }
+
