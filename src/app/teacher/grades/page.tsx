@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Button } from "@/components/ui/button";
@@ -8,7 +9,8 @@ import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
 import { collection, deleteDoc, doc, getDocs, query, orderBy, Timestamp, where, documentId, addDoc, serverTimestamp, updateDoc } from "firebase/firestore";
 import React, { useEffect, useState, useCallback, useMemo } from "react";
-import { PlusCircle, Edit3, Trash2, ClipboardList, Loader2, AlertTriangle, User, Info, Filter, UploadCloud } from "lucide-react"; // Removed BookOpen, Users - added Filter
+import { PlusCircle, Edit3, Trash2, ClipboardList, Loader2, AlertTriangle, User, Info, Filter, UploadCloud, Search } from "lucide-react";
+import { Input } from "@/components/ui/input"; // Added Input for filter
 import {
   Dialog,
   DialogContent,
@@ -47,14 +49,14 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import Link from "next/link"; // Keep Link if needed for other parts, not strictly for this page's core flow
+import Link from "next/link"; 
 import { ExcelImportDialog } from "@/components/shared/ExcelImportDialog";
 
 const PASS_MARK = 50;
 
 interface GradeExcelRow {
-  studentSystemId: string; // Must match an existing student in the selected class
-  marks: string; // Will be parsed to number
+  studentSystemId: string; 
+  marks: string; 
   remarks?: string;
 }
 
@@ -72,13 +74,13 @@ export default function TeacherGradesPage() {
   const [studentsInSelectedClass, setStudentsInSelectedClass] = useState<Student[]>([]);
   
   const [isLoadingInitialData, setIsLoadingInitialData] = useState(true);
-  const [isGradesLoading, setIsGradesLoading] = useState(false); // For grades and students of selected class/subject
+  const [isGradesLoading, setIsGradesLoading] = useState(false); 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingGrade, setEditingGrade] = useState<Grade | null>(null);
   const [isImportGradesDialogOpen, setIsImportGradesDialogOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState(""); // State for search filter
   const { toast } = useToast();
 
-  // Fetch initial data: all classes, all subjects assigned to this teacher, all class-course assignments
   useEffect(() => {
     if (!userProfile || authLoading) {
       setIsLoadingInitialData(false);
@@ -89,7 +91,7 @@ export default function TeacherGradesPage() {
       try {
         const classesQuery = query(collection(db, "classes"), orderBy("name"));
         const teacherSubjectsQuery = query(collection(db, "courses"), where("teacherId", "==", userProfile.uid), orderBy("name"));
-        const classAssignmentsQuery = query(collection(db, "classAssignments")); // No specific order needed here, will be filtered
+        const classAssignmentsQuery = query(collection(db, "classAssignments")); 
 
         const [classesSnap, teacherSubjectsSnap, classAssignmentsSnap] = await Promise.all([
           getDocs(classesQuery),
@@ -111,38 +113,31 @@ export default function TeacherGradesPage() {
     fetchData();
   }, [userProfile, authLoading, toast]);
 
-  // Memoized list of subjects available for selection based on selectedClassId and teacher's assigned subjects
   const availableSubjectsForSelectedClass = useMemo(() => {
     if (!selectedClassId || !userProfile) return [];
-    // Find subject IDs assigned to the selected class
     const subjectIdsInClass = allClassAssignments
       .filter(ca => ca.classId === selectedClassId)
-      .map(ca => ca.courseId); // courseId here is the subjectId
-    // Filter teacher's assigned subjects to only include those also present in the selected class's assignments
+      .map(ca => ca.courseId); 
     return teacherAssignedSubjects.filter(ts => subjectIdsInClass.includes(ts.id));
   }, [selectedClassId, allClassAssignments, teacherAssignedSubjects, userProfile]);
 
-  // Fetch students for the selected class AND grades for selected class AND subject
   const fetchClassAndGradeData = useCallback(async () => {
     if (!selectedClassId || !selectedSubjectId || !userProfile) {
       setGrades([]);
-      setStudentsInSelectedClass([]); // Ensure students are cleared if no class/subject
+      setStudentsInSelectedClass([]); 
       setIsGradesLoading(false);
       return;
     }
     setIsGradesLoading(true);
     try {
-      // Fetch students assigned to the selected class
       const studentsInClassQuery = query(collection(db, "students"), where("classId", "==", selectedClassId), orderBy("fullName"));
       const studentsSnapshot = await getDocs(studentsInClassQuery);
       const classStudents = studentsSnapshot.docs.map(sDoc => ({id: sDoc.id, ...sDoc.data()} as Student));
       setStudentsInSelectedClass(classStudents);
       
-      // Fetch grades for the selected subject AND for students specifically in the selected class
       if (classStudents.length > 0) {
         const studentIdsInClass = classStudents.map(s => s.id);
         
-        // Batching for 'in' query if studentIdsInClass.length > 30
         const studentIdBatches: string[][] = [];
         for (let i = 0; i < studentIdsInClass.length; i += 30) {
             studentIdBatches.push(studentIdsInClass.slice(i, i + 30));
@@ -155,7 +150,7 @@ export default function TeacherGradesPage() {
                     collection(db, "grades"), 
                     where("courseId", "==", selectedSubjectId),
                     where("studentId", "in", batch),
-                    orderBy("studentName", "asc") // studentName on grade doc is denormalized
+                    orderBy("studentName", "asc") 
                 );
                 const gradesSnapshot = await getDocs(gradesQuery);
                 fetchedGrades = fetchedGrades.concat(gradesSnapshot.docs.map(gDoc => ({ 
@@ -167,35 +162,31 @@ export default function TeacherGradesPage() {
         }
         setGrades(fetchedGrades.sort((a,b) => a.studentName.localeCompare(b.studentName)));
 
-      } else { // No students in the class
+      } else { 
         setGrades([]);
       }
 
     } catch (err: any) {
       console.error("Error fetching students for class or grades for subject: ", err);
       toast({ title: "Error", description: `Failed to load student or grade data.`, variant: "destructive" });
-      setGrades([]); // Clear grades on error
-      // setStudentsInSelectedClass([]); // Students might have loaded, but grades failed. Let's not clear students here.
+      setGrades([]); 
     } finally {
       setIsGradesLoading(false);
     }
   }, [selectedClassId, selectedSubjectId, userProfile, toast]);
 
-  // Effect to run when selectedClassId or selectedSubjectId changes
   useEffect(() => {
     if(selectedClassId && selectedSubjectId) {
       fetchClassAndGradeData();
     } else {
-      // If either class or subject is not selected, clear relevant data
       setGrades([]); 
-      if (!selectedClassId) { // If class is cleared, clear students too
+      if (!selectedClassId) { 
           setStudentsInSelectedClass([]);
       }
       setIsGradesLoading(false);
     }
   }, [selectedClassId, selectedSubjectId, fetchClassAndGradeData]);
 
-  // Reset selected subject if class changes, to force re-selection of a subject valid for the new class
   useEffect(() => {
     setSelectedSubjectId(null);
   }, [selectedClassId]);
@@ -231,7 +222,7 @@ export default function TeacherGradesPage() {
     try {
       await deleteDoc(doc(db, "grades", grade.id));
       toast({ title: "Grade Deleted", description: `Grade for ${grade.studentName} in ${grade.courseName} deleted.` });
-      fetchClassAndGradeData(); // Refetch grades for the current class/subject
+      fetchClassAndGradeData(); 
     } catch (error: any) {
       console.error("Error deleting grade: ", error);
       toast({ title: "Delete Failed", description: error.message || "Could not delete grade.", variant: "destructive" });
@@ -259,7 +250,7 @@ export default function TeacherGradesPage() {
         errors.push("A grade record was skipped due to missing studentSystemId.");
         continue;
       }
-      const marks = parseFloat(String(row.marks ?? '')); // Ensure marks is a string before parseFloat
+      const marks = parseFloat(String(row.marks ?? '')); 
       if (isNaN(marks) || marks < 0 || marks > 100) {
         failCount++;
         errors.push(`Invalid marks for student ID ${studentSystemIdTrimmed}: '${row.marks}'. Skipped.`);
@@ -282,7 +273,7 @@ export default function TeacherGradesPage() {
         marks: marks,
         status,
         remarks: row.remarks || "",
-        term: "Term 1", // Default or make configurable via import/UI
+        term: "Term 1", 
         enteredByTeacherId: userProfile.uid,
         enteredByTeacherEmail: userProfile.email || undefined,
         updatedAt: serverTimestamp() as unknown as Date,
@@ -293,13 +284,11 @@ export default function TeacherGradesPage() {
           collection(db, "grades"),
           where("studentId", "==", student.id),
           where("courseId", "==", currentSubjectForForm.id)
-          // Consider adding where("term", "==", gradePayload.term) if terms are distinct records
         );
         const gradeSnapshot = await getDocs(gradeQuery);
 
         if (!gradeSnapshot.empty) { 
           const existingGradeDoc = gradeSnapshot.docs[0];
-          // Prevent teacher from overwriting admin/other teacher's grade unless they are admin
           if (existingGradeDoc.data().enteredByTeacherId !== userProfile.uid && userProfile.role !== 'Admin') {
             failCount++;
             errors.push(`Grade for ${student.fullName} (ID: ${studentSystemIdTrimmed}) was entered by another user and cannot be overwritten. Skipped.`);
@@ -332,11 +321,18 @@ export default function TeacherGradesPage() {
     return { success: successCount > 0 || (successCount === 0 && failCount === 0), message };
   };
 
+  const filteredGrades = useMemo(() => {
+    if (!searchTerm) return grades;
+    return grades.filter(grade => 
+      grade.studentName.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [grades, searchTerm]);
+
 
   if (authLoading || isLoadingInitialData) {
     return <div className="flex justify-center items-center h-64"><Loader2 className="h-12 w-12 animate-spin text-primary" /> <p className="ml-2 text-muted-foreground">Loading page data...</p></div>;
   }
-  if (!userProfile) { // Should be caught by layout, but as a fallback
+  if (!userProfile) { 
     return <div className="flex justify-center items-center h-64"><AlertTriangle className="h-12 w-12 text-destructive" /> <p className="ml-2 text-destructive-foreground">User not authenticated.</p></div>;
   }
 
@@ -348,11 +344,10 @@ export default function TeacherGradesPage() {
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8 gap-4">
           <h1 className="text-3xl font-bold tracking-tight text-foreground">Manage Student Grades</h1>
           <div className="flex flex-col sm:flex-row items-center gap-2 w-full md:w-auto">
-            {/* Class Selector */}
             <Select 
-                onValueChange={(value) => { setSelectedClassId(value); setSelectedSubjectId(null); /* Reset subject when class changes */ }} 
+                onValueChange={(value) => { setSelectedClassId(value); setSelectedSubjectId(null); }} 
                 value={selectedClassId || ""}
-                disabled={allClasses.length === 0 || isGradesLoading} // isGradesLoading refers to specific class/subject grades
+                disabled={allClasses.length === 0 || isGradesLoading} 
             >
                 <SelectTrigger className="w-full sm:min-w-[200px]">
                     <SelectValue placeholder={allClasses.length === 0 ? "No classes available" : "Select a Class"} />
@@ -367,7 +362,6 @@ export default function TeacherGradesPage() {
                 </SelectContent>
             </Select>
 
-            {/* Subject Selector (dynamically populated) */}
             <Select 
                 onValueChange={setSelectedSubjectId} 
                 value={selectedSubjectId || ""}
@@ -407,15 +401,15 @@ export default function TeacherGradesPage() {
                       {editingGrade ? "Update student's grade." : `Enter student's grade for ${currentSubjectForForm?.name || 'selected subject'} in class ${allClasses.find(c=>c.id===selectedClassId)?.name || ''}.`}
                     </DialogDescription>
                   </DialogHeader>
-                  {currentSubjectForForm && selectedClassId && ( // Ensure currentSubjectForForm and selectedClassId are available
+                  {currentSubjectForForm && selectedClassId && ( 
                     <GradeForm 
                       initialData={editingGrade}
-                      course={currentSubjectForForm} // This is actually the subject
+                      course={currentSubjectForForm} 
                       students={studentsInSelectedClass} 
                       onClose={() => {
                         setIsFormOpen(false);
                         setEditingGrade(null);
-                        fetchClassAndGradeData(); // Refetch data for current class/subject
+                        fetchClassAndGradeData(); 
                       }} 
                     />
                   )}
@@ -468,7 +462,125 @@ export default function TeacherGradesPage() {
           </Card>
         )}
 
-        {!isGradesLoading && selectedClassId && selectedSubjectId && grades.length === 0 && studentsInSelectedClass.length > 0 && (
+        {!isGradesLoading && selectedClassId && selectedSubjectId && grades.length > 0 && studentsInSelectedClass.length > 0 && (
+          <Card>
+            <CardHeader>
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                    <CardTitle>Grades for: {currentSubjectForForm?.name} ({currentSubjectForForm?.code}) - Class: {allClasses.find(c => c.id === selectedClassId)?.name}</CardTitle>
+                    <CardDescription>A list of student grades for this subject in the selected class. You can add, edit, or delete grades you entered.</CardDescription>
+                </div>
+                <div className="relative w-full sm:w-auto">
+                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                        type="search"
+                        placeholder="Filter by student name..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="pl-8 w-full sm:w-[250px]"
+                    />
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <ScrollArea className="h-[calc(100vh-34rem)]"> {/* Adjusted height for filter input */}
+                {filteredGrades.length === 0 && searchTerm && (
+                   <div className="text-center py-10">
+                     <Search className="mx-auto h-12 w-12 text-muted-foreground" data-ai-hint="search empty" />
+                     <p className="mt-4 text-lg text-muted-foreground">No students found matching "{searchTerm}".</p>
+                   </div>
+                )}
+                {filteredGrades.length > 0 && (
+                    <Table>
+                    <TableHeader>
+                        <TableRow>
+                        <TableHead className="w-[200px]">Student Name</TableHead>
+                        <TableHead>Student ID</TableHead>
+                        <TableHead className="text-center">Marks</TableHead>
+                        <TableHead className="text-center">Status</TableHead>
+                        <TableHead>Remarks</TableHead>
+                        <TableHead className="text-center">Entered By</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {filteredGrades.map((grade) => {
+                            const studentDetails = studentsInSelectedClass.find(s => s.id === grade.studentId);
+                            const canModify = grade.enteredByTeacherId === userProfile?.uid || userProfile?.role === 'Admin';
+                            return (
+                            <TableRow key={grade.id}>
+                                <TableCell className="font-medium">{grade.studentName}</TableCell>
+                                <TableCell>{studentDetails?.studentSystemId || 'N/A'}</TableCell>
+                                <TableCell className="text-center">{grade.marks}</TableCell>
+                                <TableCell className="text-center">
+                                <Badge variant={grade.status === 'Pass' ? 'default' : 'destructive'} 
+                                        className={grade.status === 'Pass' ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'}>
+                                    {grade.status}
+                                </Badge>
+                                </TableCell>
+                                <TableCell className="max-w-[200px] truncate" title={grade.remarks || undefined}>{grade.remarks || "-"}</TableCell>
+                                <TableCell className="text-center">
+                                {grade.enteredByTeacherEmail ? (
+                                    <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <span className="truncate cursor-default">{grade.enteredByTeacherEmail.split('@')[0]}</span>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                        <p>{grade.enteredByTeacherEmail}</p>
+                                    </TooltipContent>
+                                    </Tooltip>
+                                ) : (
+                                    <Tooltip>
+                                    <TooltipTrigger asChild><User className="h-4 w-4 mx-auto text-muted-foreground" /></TooltipTrigger>
+                                    <TooltipContent><p>Admin/System Entry</p></TooltipContent>
+                                    </Tooltip>
+                                )}
+                                </TableCell>
+                                <TableCell className="text-right">
+                                <div className="flex justify-end gap-2">
+                                    {canModify && (
+                                    <>
+                                        <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => handleEdit(grade)}>
+                                        <Edit3 className="h-4 w-4" />
+                                        <span className="sr-only">Edit</span>
+                                        </Button>
+                                        <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                            <Button variant="destructive" size="icon" className="h-8 w-8">
+                                            <Trash2 className="h-4 w-4" />
+                                            <span className="sr-only">Delete</span>
+                                            </Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                            <AlertDialogHeader>
+                                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                            <AlertDialogDescription>
+                                                This action will permanently delete the grade for {grade.studentName} in {grade.courseName}.
+                                            </AlertDialogDescription>
+                                            </AlertDialogHeader>
+                                            <AlertDialogFooter>
+                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                            <AlertDialogAction onClick={() => handleDelete(grade)} className="bg-destructive hover:bg-destructive/90">
+                                                Delete
+                                            </AlertDialogAction>
+                                            </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                        </AlertDialog>
+                                    </>
+                                    )}
+                                </div>
+                                </TableCell>
+                            </TableRow>
+                            );
+                        })}
+                    </TableBody>
+                    </Table>
+                )}
+              </ScrollArea>
+            </CardContent>
+          </Card>
+        )}
+        {!isGradesLoading && selectedClassId && selectedSubjectId && grades.length === 0 && studentsInSelectedClass.length > 0 && !searchTerm && (
           <Card className="text-center py-12">
             <CardHeader>
               <div className="mx-auto bg-secondary rounded-full p-3 w-fit">
@@ -481,105 +593,10 @@ export default function TeacherGradesPage() {
             </CardHeader>
           </Card>
         )}
-
-        {!isGradesLoading && selectedClassId && selectedSubjectId && grades.length > 0 && studentsInSelectedClass.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Grades for: {currentSubjectForForm?.name} ({currentSubjectForForm?.code}) - Class: {allClasses.find(c => c.id === selectedClassId)?.name}</CardTitle>
-              <CardDescription>A list of student grades for this subject in the selected class. You can add, edit, or delete grades you entered.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ScrollArea className="h-[calc(100vh-30rem)]"> 
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-[200px]">Student Name</TableHead>
-                      <TableHead>Student ID</TableHead>
-                      <TableHead className="text-center">Marks</TableHead>
-                      <TableHead className="text-center">Status</TableHead>
-                      <TableHead>Remarks</TableHead>
-                      <TableHead className="text-center">Entered By</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {grades.map((grade) => {
-                        const studentDetails = studentsInSelectedClass.find(s => s.id === grade.studentId);
-                        const canModify = grade.enteredByTeacherId === userProfile?.uid || userProfile?.role === 'Admin';
-                        return (
-                          <TableRow key={grade.id}>
-                            <TableCell className="font-medium">{grade.studentName}</TableCell>
-                            <TableCell>{studentDetails?.studentSystemId || 'N/A'}</TableCell>
-                            <TableCell className="text-center">{grade.marks}</TableCell>
-                            <TableCell className="text-center">
-                              <Badge variant={grade.status === 'Pass' ? 'default' : 'destructive'} 
-                                    className={grade.status === 'Pass' ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'}>
-                                {grade.status}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="max-w-[200px] truncate" title={grade.remarks || undefined}>{grade.remarks || "-"}</TableCell>
-                            <TableCell className="text-center">
-                              {grade.enteredByTeacherEmail ? (
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                      <span className="truncate cursor-default">{grade.enteredByTeacherEmail.split('@')[0]}</span>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                      <p>{grade.enteredByTeacherEmail}</p>
-                                  </TooltipContent>
-                                </Tooltip>
-                              ) : (
-                                <Tooltip>
-                                  <TooltipTrigger asChild><User className="h-4 w-4 mx-auto text-muted-foreground" /></TooltipTrigger>
-                                  <TooltipContent><p>Admin/System Entry</p></TooltipContent>
-                                </Tooltip>
-                              )}
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <div className="flex justify-end gap-2">
-                                {canModify && (
-                                  <>
-                                    <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => handleEdit(grade)}>
-                                      <Edit3 className="h-4 w-4" />
-                                      <span className="sr-only">Edit</span>
-                                    </Button>
-                                    <AlertDialog>
-                                      <AlertDialogTrigger asChild>
-                                        <Button variant="destructive" size="icon" className="h-8 w-8">
-                                          <Trash2 className="h-4 w-4" />
-                                          <span className="sr-only">Delete</span>
-                                        </Button>
-                                      </AlertDialogTrigger>
-                                      <AlertDialogContent>
-                                        <AlertDialogHeader>
-                                          <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                          <AlertDialogDescription>
-                                            This action will permanently delete the grade for {grade.studentName} in {grade.courseName}.
-                                          </AlertDialogDescription>
-                                        </AlertDialogHeader>
-                                        <AlertDialogFooter>
-                                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                          <AlertDialogAction onClick={() => handleDelete(grade)} className="bg-destructive hover:bg-destructive/90">
-                                            Delete
-                                          </AlertDialogAction>
-                                        </AlertDialogFooter>
-                                      </AlertDialogContent>
-                                    </AlertDialog>
-                                  </>
-                                )}
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                  </TableBody>
-                </Table>
-              </ScrollArea>
-            </CardContent>
-          </Card>
-        )}
       </div>
       </TooltipProvider>
     </React.Fragment>
   );
 }
+
+        
