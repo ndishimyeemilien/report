@@ -82,13 +82,15 @@ export function LoginForm() {
     } catch (error: any) {
       let description = "An unexpected error occurred. Please try again.";
       if (error.code === 'auth/invalid-credential' ||
-          error.code === 'auth/wrong-password' ||
-          error.code === 'auth/user-not-found') {
-        // Log common auth errors as warnings for less console noise
+          error.code === 'auth/user-not-found' || // Combined common auth errors
+          error.code === 'auth/wrong-password') {
         console.warn(`Login attempt failed for email ${values.email}: ${error.code}`);
         description = "Invalid email or password. Please check your credentials and try again.";
-      } else {
-        // Log other, potentially more critical errors as errors
+      } else if (error.code === 'auth/network-request-failed') {
+        console.error("Login error (network):", error);
+        description = "Network error. Please check your internet connection and try again.";
+      }
+      else {
         console.error("Login error (unexpected):", error);
         if (error.message) {
             description = error.message;
