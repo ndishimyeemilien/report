@@ -1,4 +1,6 @@
 
+"use client";
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { BookOpen, ClipboardList, Users, BarChart3, UsersRound, UserCog, Percent, ListChecks } from "lucide-react"; 
 import Link from "next/link";
@@ -6,69 +8,99 @@ import { collection, getDocs, query, where, Timestamp, orderBy, limit } from "fi
 import { db } from "@/lib/firebase";
 import type { Grade } from "@/types"; 
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
 
-async function getStats() {
-  try {
-    const coursesSnapshot = await getDocs(collection(db, "courses"));
-    const gradesSnapshot = await getDocs(collection(db, "grades"));
-    const studentsSnapshot = await getDocs(collection(db, "students"));
-    const enrollmentsSnapshot = await getDocs(collection(db, "enrollments"));
-    const teachersQuery = query(collection(db, "users"), where("role", "==", "Teacher"));
-    const teachersSnapshot = await getDocs(teachersQuery);
-
-    const recentGradesQuery = query(collection(db, "grades"), orderBy("createdAt", "desc"), limit(5));
-    const recentGradesSnapshot = await getDocs(recentGradesQuery);
-    const recentGrades = recentGradesSnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-      createdAt: (doc.data().createdAt as Timestamp)?.toDate(),
-      updatedAt: (doc.data().updatedAt as Timestamp)?.toDate(),
-    })) as Grade[];
-
-
-    let totalPasses = 0;
-    gradesSnapshot.forEach(doc => {
-      const gradeData = doc.data();
-      if (gradeData.status === 'Pass') {
-        totalPasses++;
-      }
-    });
-    const overallPassRate = gradesSnapshot.size > 0 ? (totalPasses / gradesSnapshot.size) * 100 : 0;
-
-    return {
-      totalCourses: coursesSnapshot.size,
-      totalGrades: gradesSnapshot.size,
-      overallPassRate: overallPassRate,
-      totalTeachers: teachersSnapshot.size,
-      totalStudents: studentsSnapshot.size,
-      totalEnrollments: enrollmentsSnapshot.size,
-      recentGrades,
-      error: null,
-    };
-  } catch (error) {
-    console.error("Error fetching dashboard stats:", error);
-    return {
-      totalCourses: 0,
-      totalGrades: 0,
-      overallPassRate: 0,
-      totalTeachers: 0,
-      totalStudents: 0,
-      totalEnrollments: 0,
-      recentGrades: [],
-      error: "Could not load statistics.",
-    };
-  }
+interface DashboardStats {
+  totalCourses: number;
+  totalGrades: number;
+  overallPassRate: number;
+  totalTeachers: number;
+  totalStudents: number;
+  totalEnrollments: number;
+  recentGrades: Grade[];
+  error: string | null;
+  loading: boolean;
 }
 
+export default function DashboardPage() {
+  const [statsData, setStatsData] = useState<DashboardStats>({
+    totalCourses: 0,
+    totalGrades: 0,
+    overallPassRate: 0,
+    totalTeachers: 0,
+    totalStudents: 0,
+    totalEnrollments: 0,
+    recentGrades: [],
+    error: null,
+    loading: true,
+  });
 
-export default async function DashboardPage() {
-  const { totalCourses, totalGrades, overallPassRate,totalTeachers, totalStudents, totalEnrollments, recentGrades, error: statsError } = await getStats();
+  useEffect(() => {
+    const getStats = async () => {
+      setStatsData(prev => ({ ...prev, loading: true, error: null }));
+      try {
+        const coursesSnapshot = await getDocs(collection(db, "courses"));
+        const gradesSnapshot = await getDocs(collection(db, "grades"));
+        const studentsSnapshot = await getDocs(collection(db, "students"));
+        const enrollmentsSnapshot = await getDocs(collection(db, "enrollments"));
+        const teachersQuery = query(collection(db, "users"), where("role", "==", "Teacher"));
+        const teachersSnapshot = await getDocs(teachersQuery);
 
-  const stats = [
+        const recentGradesQuery = query(collection(db, "grades"), orderBy("createdAt", "desc"), limit(5));
+        const recentGradesSnapshot = await getDocs(recentGradesQuery);
+        const recentGrades = recentGradesSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+          createdAt: (doc.data().createdAt as Timestamp)?.toDate(),
+          updatedAt: (doc.data().updatedAt as Timestamp)?.toDate(),
+        })) as Grade[];
+
+        let totalPasses = 0;
+        gradesSnapshot.forEach(doc => {
+          const gradeData = doc.data();
+          if (gradeData.status === 'Pass') {
+            totalPasses++;
+          }
+        });
+        const overallPassRate = gradesSnapshot.size > 0 ? (totalPasses / gradesSnapshot.size) * 100 : 0;
+
+        setStatsData({
+          totalCourses: coursesSnapshot.size,
+          totalGrades: gradesSnapshot.size,
+          overallPassRate: overallPassRate,
+          totalTeachers: teachersSnapshot.size,
+          totalStudents: studentsSnapshot.size,
+          totalEnrollments: enrollmentsSnapshot.size,
+          recentGrades,
+          error: null,
+          loading: false,
+        });
+      } catch (error) {
+        console.error("Error fetching dashboard stats:", error);
+        setStatsData({
+          totalCourses: 0,
+          totalGrades: 0,
+          overallPassRate: 0,
+          totalTeachers: 0,
+          totalStudents: 0,
+          totalEnrollments: 0,
+          recentGrades: [],
+          error: "Could not load statistics.",
+          loading: false,
+        });
+      }
+    };
+    getStats();
+  }, []);
+
+  const { totalCourses, totalGrades, overallPassRate, totalTeachers, totalStudents, totalEnrollments, recentGrades, error: statsError, loading: statsLoading } = statsData;
+
+  const statsCards = [
     { title: "Total Subjects", value: totalCourses.toString(), icon: BookOpen, href: "/admin/dashboard/courses", iconColor: "text-blue-500" }, 
     { title: "Grades Recorded", value: totalGrades.toString(), icon: ClipboardList, href: "/admin/dashboard/grades", iconColor: "text-green-500" },
     { title: "Overall Pass Rate", value: overallPassRate.toFixed(1) + "%", icon: Percent, href: "/admin/dashboard/reports", iconColor: "text-teal-500" }, 
-    { title: "Total Teachers", value: totalTeachers.toString(), icon: UserCog, href: "/admin/dashboard/courses", iconColor: "text-orange-500" }, 
+    { title: "Total Teachers", value: totalTeachers.toString(), icon: UserCog, href: "/admin/dashboard/teachers", iconColor: "text-orange-500" }, 
     { title: "Total Students", value: totalStudents.toString(), icon: Users, href: "/secretary/students", iconColor: "text-purple-500" }, 
     { title: "Total Enrollments", value: totalEnrollments.toString(), icon: UsersRound, href: "/secretary/enrollments", iconColor: "text-indigo-500" }, 
     { title: "View Reports", value: "Analytics", icon: BarChart3, href: "/admin/dashboard/reports", iconColor: "text-yellow-500" },
@@ -78,6 +110,15 @@ export default async function DashboardPage() {
     if (!date) return 'N/A';
     return new Date(date).toLocaleDateString();
   };
+
+  if (statsLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        <p className="ml-4 text-muted-foreground">Loading dashboard data...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto py-8">
@@ -90,12 +131,13 @@ export default async function DashboardPage() {
           </CardHeader>
           <CardContent>
             <p className="text-destructive-foreground">{statsError}</p>
+            <Button onClick={() => window.location.reload()} variant="outline">Try Again</Button>
           </CardContent>
         </Card>
       )}
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"> 
-        {stats.map((stat) => (
+        {statsCards.map((stat) => (
            <Link href={stat.href} key={stat.title}>
             <Card className={`hover:shadow-lg transition-shadow duration-200`}>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -129,6 +171,7 @@ export default async function DashboardPage() {
                         <li>View and manage all student grades (override if necessary).</li>
                         <li>Access comprehensive academic reports.</li>
                         <li>Oversee student records and enrollments (managed by Secretary).</li>
+                         <li>Manage Teacher accounts.</li>
                     </ul>
                 </div>
                  <div className="rounded-lg border bg-card p-6 shadow-sm">
@@ -167,4 +210,3 @@ export default async function DashboardPage() {
     </div>
   );
 }
-
