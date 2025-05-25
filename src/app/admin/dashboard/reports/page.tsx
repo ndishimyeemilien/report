@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from "@/components/ui/chart";
 import { BarChart as RechartsBarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip as RechartsTooltip, Legend as RechartsLegend } from "recharts";
-import { Loader2, AlertTriangle, BarChart3, Percent, CheckCircle, XCircle, TrendingUp, TrendingDown, ListChecks, FileSpreadsheet, Users, BookOpen, Download, UserSquare2 } from "lucide-react";
+import { Loader2, AlertTriangle, BarChart3, Percent, CheckCircle, XCircle, TrendingUp, TrendingDown, ListChecks, FileSpreadsheet, Users, BookOpen, Download, UserSquare2, ExternalLink } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -590,7 +590,7 @@ export default function ReportsPage() {
                 <UserSquare2 className="h-6 w-6"/>
                 Student Performance Summary
             </CardTitle>
-            <CardDescription>Average performance for each student across all their graded subjects.</CardDescription>
+            <CardDescription>Average performance for each student across all their graded subjects. Click name for detailed report.</CardDescription>
             </CardHeader>
             <CardContent>
             <ScrollArea className="h-[calc(100vh-25rem)] md:h-auto md:max-h-[60vh]">
@@ -602,12 +602,17 @@ export default function ReportsPage() {
                     <TableHead>Class</TableHead>
                     <TableHead className="text-center">Subjects Graded</TableHead>
                     <TableHead className="text-center">Average Mark (%)</TableHead>
+                    <TableHead className="text-center">Actions</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
                     {studentPerformance.map(student => (
                     <TableRow key={student.studentId}>
-                        <TableCell className="font-medium">{student.studentName}</TableCell>
+                        <TableCell className="font-medium">
+                           <Link href={`/admin/dashboard/reports/student/${student.studentId}`} className="hover:underline text-accent">
+                                {student.studentName}
+                           </Link>
+                        </TableCell>
                         <TableCell>{student.studentSystemId || "N/A"}</TableCell>
                         <TableCell>{student.className || "N/A"}</TableCell>
                         <TableCell className="text-center">{student.numberOfSubjectsGraded}</TableCell>
@@ -625,6 +630,13 @@ export default function ReportsPage() {
                         ) : (
                             "N/A"
                         )}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Link href={`/admin/dashboard/reports/student/${student.studentId}`}>
+                            <Button variant="outline" size="sm" className="h-8">
+                                <ExternalLink className="mr-1.5 h-3.5 w-3.5" /> View Report
+                            </Button>
+                          </Link>
                         </TableCell>
                     </TableRow>
                     ))}
