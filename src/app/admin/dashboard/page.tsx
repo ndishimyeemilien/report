@@ -2,7 +2,7 @@
 "use client";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { BookOpen, ClipboardList, Users, BarChart3, UsersRound, UserCog, Percent, ListChecks, Loader2 } from "lucide-react"; 
+import { BookOpen, ClipboardList, Users, BarChart3, UsersRound, UserCog, Percent, ListChecks, Loader2, Users2 } from "lucide-react"; 
 import Link from "next/link";
 import { collection, getDocs, query, where, Timestamp, orderBy, limit } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -18,6 +18,7 @@ interface DashboardStats {
   totalTeachers: number;
   totalStudents: number;
   totalEnrollments: number;
+  totalRegisteredUsers: number;
   recentGrades: Grade[];
   error: string | null;
   loading: boolean;
@@ -31,6 +32,7 @@ export default function DashboardPage() {
     totalTeachers: 0,
     totalStudents: 0,
     totalEnrollments: 0,
+    totalRegisteredUsers: 0,
     recentGrades: [],
     error: null,
     loading: true,
@@ -46,6 +48,8 @@ export default function DashboardPage() {
         const enrollmentsSnapshot = await getDocs(collection(db, "enrollments"));
         const teachersQuery = query(collection(db, "users"), where("role", "==", "Teacher"));
         const teachersSnapshot = await getDocs(teachersQuery);
+        const allUsersSnapshot = await getDocs(collection(db, "users"));
+
 
         const recentGradesQuery = query(collection(db, "grades"), orderBy("createdAt", "desc"), limit(5));
         const recentGradesSnapshot = await getDocs(recentGradesQuery);
@@ -72,6 +76,7 @@ export default function DashboardPage() {
           totalTeachers: teachersSnapshot.size,
           totalStudents: studentsSnapshot.size,
           totalEnrollments: enrollmentsSnapshot.size,
+          totalRegisteredUsers: allUsersSnapshot.size,
           recentGrades,
           error: null,
           loading: false,
@@ -85,6 +90,7 @@ export default function DashboardPage() {
           totalTeachers: 0,
           totalStudents: 0,
           totalEnrollments: 0,
+          totalRegisteredUsers: 0,
           recentGrades: [],
           error: "Could not load statistics.",
           loading: false,
@@ -94,12 +100,13 @@ export default function DashboardPage() {
     getStats();
   }, []);
 
-  const { totalCourses, totalGrades, overallPassRate, totalTeachers, totalStudents, totalEnrollments, recentGrades, error: statsError, loading: statsLoading } = statsData;
+  const { totalCourses, totalGrades, overallPassRate, totalTeachers, totalStudents, totalEnrollments, totalRegisteredUsers, recentGrades, error: statsError, loading: statsLoading } = statsData;
 
   const statsCards = [
     { title: "Total Subjects", value: totalCourses.toString(), icon: BookOpen, href: "/admin/dashboard/courses", iconColor: "text-blue-500" }, 
     { title: "Grades Recorded", value: totalGrades.toString(), icon: ClipboardList, href: "/admin/dashboard/grades", iconColor: "text-green-500" },
     { title: "Overall Pass Rate", value: overallPassRate.toFixed(1) + "%", icon: Percent, href: "/admin/dashboard/reports", iconColor: "text-teal-500" }, 
+    { title: "Total Registered Users", value: totalRegisteredUsers.toString(), icon: Users2, href: "/admin/dashboard/users", iconColor: "text-sky-500" },
     { title: "Total Teachers", value: totalTeachers.toString(), icon: UserCog, href: "/admin/dashboard/teachers", iconColor: "text-orange-500" }, 
     { title: "Total Students", value: totalStudents.toString(), icon: Users, href: "/secretary/students", iconColor: "text-purple-500" }, 
     { title: "Total Enrollments", value: totalEnrollments.toString(), icon: UsersRound, href: "/secretary/enrollments", iconColor: "text-indigo-500" }, 
@@ -172,6 +179,7 @@ export default function DashboardPage() {
                         <li><Link href="/admin/dashboard/reports" className="hover:underline text-accent">Access comprehensive academic reports</Link>.</li>
                         <li>Oversee student records (via <Link href="/secretary/students" className="hover:underline text-accent">Students</Link>) and enrollments (via <Link href="/secretary/enrollments" className="hover:underline text-accent">Enrollments</Link>).</li>
                         <li><Link href="/admin/dashboard/teachers" className="hover:underline text-accent">Manage Teacher accounts</Link>.</li>
+                        <li><Link href="/admin/dashboard/users" className="hover:underline text-accent">View all registered users</Link>.</li>
                     </ul>
                 </div>
                  <div className="rounded-lg border bg-card p-6 shadow-sm">

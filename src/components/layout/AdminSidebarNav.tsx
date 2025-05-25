@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { LayoutDashboard, BookOpen, ClipboardList, FileText, Settings, Users, UserCog } from "lucide-react";
+import { LayoutDashboard, BookOpen, ClipboardList, FileText, Settings, Users, UserCog, Users2 } from "lucide-react";
 
 export interface NavItem {
   href: string;
@@ -22,6 +22,7 @@ export const adminNavItems: NavItem[] = [
   { href: "/admin/dashboard/reports", label: "Reports", icon: FileText },
   { href: "/secretary/students", label: "Students", icon: Users }, // Link to secretary's student page
   { href: "/admin/dashboard/teachers", label: "Teachers", icon: UserCog, disabled: false }, 
+  { href: "/admin/dashboard/users", label: "Manage Users", icon: Users2 },
   { href: "/admin/settings", label: "Settings", icon: Settings },
 ];
 
@@ -38,10 +39,17 @@ export default function AdminSidebarNav({ isMobile = false }: AdminSidebarNavPro
       {navItems.map((item) => {
         const isActive =
           pathname === item.href ||
-          (pathname.startsWith(item.href) && item.href !== "/admin/dashboard" && item.href !== "/admin/settings" && item.href !== "/secretary/students" && item.href !== "/admin/dashboard/teachers") ||
+          (pathname.startsWith(item.href) && 
+           item.href !== "/admin/dashboard" && 
+           item.href !== "/admin/settings" && 
+           item.href !== "/secretary/students" && 
+           item.href !== "/admin/dashboard/teachers" &&
+           item.href !== "/admin/dashboard/users"
+          ) ||
           (item.href === "/admin/settings" && pathname.startsWith("/admin/settings")) ||
           (item.href === "/secretary/students" && pathname.startsWith("/secretary/students")) ||
-          (item.href === "/admin/dashboard/teachers" && pathname.startsWith("/admin/dashboard/teachers"));
+          (item.href === "/admin/dashboard/teachers" && pathname.startsWith("/admin/dashboard/teachers")) ||
+          (item.href === "/admin/dashboard/users" && pathname.startsWith("/admin/dashboard/users"));
 
 
         const buttonVariant = isActive ? "default" : "ghost";
@@ -56,7 +64,7 @@ export default function AdminSidebarNav({ isMobile = false }: AdminSidebarNavPro
 
         return (
           <Button
-            key={item.label} // Use label for key if href can be different
+            key={item.label} 
             asChild
             variant={buttonVariant}
             className={buttonClassName}
