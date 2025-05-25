@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, BookOpen, UsersRound, Archive, Link2 } from "lucide-react"; // Added Archive for classes, Link2 for assignments
 import Link from "next/link";
