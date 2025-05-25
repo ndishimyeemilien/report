@@ -2,7 +2,7 @@
 "use client";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { BookOpen, ClipboardList, Users, BarChart3, UsersRound, UserCog, Percent, ListChecks } from "lucide-react"; 
+import { BookOpen, ClipboardList, Users, BarChart3, UsersRound, UserCog, Percent, ListChecks, Loader2 } from "lucide-react"; 
 import Link from "next/link";
 import { collection, getDocs, query, where, Timestamp, orderBy, limit } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -167,11 +167,11 @@ export default function DashboardPage() {
                 <div className="rounded-lg border bg-card p-6 shadow-sm">
                     <h3 className="text-lg font-semibold mb-2 text-primary">Key Admin Functions</h3>
                     <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
-                        <li>Manage subjects (add to predefined categories/combinations, assign teachers).</li>
-                        <li>View and manage all student grades (override if necessary).</li>
-                        <li>Access comprehensive academic reports.</li>
-                        <li>Oversee student records and enrollments (managed by Secretary).</li>
-                         <li>Manage Teacher accounts.</li>
+                        <li><Link href="/admin/dashboard/courses" className="hover:underline text-accent">Manage subjects</Link> (add to categories/combinations, assign teachers).</li>
+                        <li><Link href="/admin/dashboard/grades" className="hover:underline text-accent">View and manage all student grades</Link> (override if necessary).</li>
+                        <li><Link href="/admin/dashboard/reports" className="hover:underline text-accent">Access comprehensive academic reports</Link>.</li>
+                        <li>Oversee student records (via <Link href="/secretary/students" className="hover:underline text-accent">Students</Link>) and enrollments (via <Link href="/secretary/enrollments" className="hover:underline text-accent">Enrollments</Link>).</li>
+                        <li><Link href="/admin/dashboard/teachers" className="hover:underline text-accent">Manage Teacher accounts</Link>.</li>
                     </ul>
                 </div>
                  <div className="rounded-lg border bg-card p-6 shadow-sm">
@@ -210,3 +210,4 @@ export default function DashboardPage() {
     </div>
   );
 }
+
