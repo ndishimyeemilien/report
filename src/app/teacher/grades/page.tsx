@@ -7,7 +7,7 @@ import { GradeForm } from "@/components/grades/GradeForm";
 import type { Grade, Course, Student, Class, ClassCourseAssignment } from "@/types"; 
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
-import { collection, deleteDoc, doc, getDocs, query, orderBy, Timestamp, where, documentId, addDoc, serverTimestamp, updateDoc } from "firebase/firestore";
+import { collection, deleteDoc, doc, getDocs, query, orderBy, Timestamp, where, documentId, addDoc, serverTimestamp, updateDoc, type FieldValue } from "firebase/firestore";
 import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { PlusCircle, Edit3, Trash2, ClipboardList, Loader2, AlertTriangle, User, Info, Filter, UploadCloud, Search } from "lucide-react";
 import { Input } from "@/components/ui/input"; // Added Input for filter
@@ -265,7 +265,7 @@ export default function TeacherGradesPage() {
       }
 
       const status: 'Pass' | 'Fail' = marks >= PASS_MARK ? 'Pass' : 'Fail';
-      const gradePayload: Partial<Omit<Grade, 'id'>> = {
+      const gradePayload: Partial<Omit<Grade, 'id'>> & {updatedAt: FieldValue, createdAt?: FieldValue} = {
         studentId: student.id,
         studentName: student.fullName,
         courseId: currentSubjectForForm.id,
@@ -276,7 +276,7 @@ export default function TeacherGradesPage() {
         term: "Term 1", 
         enteredByTeacherId: userProfile.uid,
         enteredByTeacherEmail: userProfile.email || undefined,
-        updatedAt: serverTimestamp() as unknown as Date,
+        updatedAt: serverTimestamp(),
       };
 
       try {
@@ -298,7 +298,7 @@ export default function TeacherGradesPage() {
         } else { 
           await addDoc(collection(db, "grades"), {
             ...gradePayload,
-            createdAt: serverTimestamp() as unknown as Date,
+            createdAt: serverTimestamp(),
           });
         }
         successCount++;
@@ -462,7 +462,21 @@ export default function TeacherGradesPage() {
           </Card>
         )}
 
-        {!isGradesLoading && selectedClassId && selectedSubjectId && grades.length > 0 && studentsInSelectedClass.length > 0 && (
+        {!isGradesLoading && selectedClassId && selectedSubjectId && grades.length === 0 && studentsInSelectedClass.length > 0 && !searchTerm && (
+          <Card className="text-center py-12">
+            <CardHeader>
+              <div className="mx-auto bg-secondary rounded-full p-3 w-fit">
+              <ClipboardList className="h-12 w-12 text-muted-foreground" data-ai-hint="list empty"/>
+              </div>
+              <CardTitle className="mt-4 text-2xl">No Grades Found</CardTitle>
+              <CardDescription>
+                Start by adding grades for students in {currentSubjectForForm?.name || 'this subject'} for class {allClasses.find(c => c.id === selectedClassId)?.name || ''}.
+              </CardDescription>
+            </CardHeader>
+          </Card>
+        )}
+
+        {!isGradesLoading && selectedClassId && selectedSubjectId && (filteredGrades.length > 0 || (searchTerm && grades.length > 0)) && studentsInSelectedClass.length > 0 && (
           <Card>
             <CardHeader>
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -580,23 +594,8 @@ export default function TeacherGradesPage() {
             </CardContent>
           </Card>
         )}
-        {!isGradesLoading && selectedClassId && selectedSubjectId && grades.length === 0 && studentsInSelectedClass.length > 0 && !searchTerm && (
-          <Card className="text-center py-12">
-            <CardHeader>
-              <div className="mx-auto bg-secondary rounded-full p-3 w-fit">
-              <ClipboardList className="h-12 w-12 text-muted-foreground" data-ai-hint="list empty"/>
-              </div>
-              <CardTitle className="mt-4 text-2xl">No Grades Found</CardTitle>
-              <CardDescription>
-                Start by adding grades for students in {currentSubjectForForm?.name || 'this subject'} for class {allClasses.find(c => c.id === selectedClassId)?.name || ''}.
-              </CardDescription>
-            </CardHeader>
-          </Card>
-        )}
       </div>
       </TooltipProvider>
     </React.Fragment>
   );
 }
-
-        
