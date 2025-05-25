@@ -1,4 +1,5 @@
 
+
 export interface Course {
   id: string;
   name: string; // This will now be the subject name, e.g., Mathematics
@@ -70,7 +71,7 @@ export interface Class {
   name: string; // e.g., "Grade 10A", "Form 3 Blue"
   description?: string;
   academicYear?: string; // e.g., "2023-2024"
-  secretaryId?: string; // UID of the secretary who created/manages the class
+  secretaryId?: string; // UID of the secretary who manages the class
   secretaryName?: string; // Denormalized name of the secretary
   createdAt: Date;
   updatedAt: Date;
@@ -84,5 +85,13 @@ export interface ClassCourseAssignment {
   courseId: string; // Refers to the ID of a Course (subject)
   courseName: string; // Denormalized (e.g. "Mathematics (MATH101)")
   assignedAt: Date;
+}
+
+export interface SystemSettings {
+  id?: string; // Document ID, e.g., "generalConfig"
+  defaultAcademicYear?: string;
+  defaultTerm?: string;
+  updatedAt?: Date;
+  updatedBy?: string; // UID of admin who last updated
 }
 
