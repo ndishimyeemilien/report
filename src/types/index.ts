@@ -1,3 +1,4 @@
+
 export interface Course {
   id: string;
   name: string; // This will now be the subject name, e.g., Mathematics
@@ -61,6 +62,7 @@ export interface UserProfile {
   role: UserRole;
   createdAt?: Date;
   updatedAt?: Date;
+  assignedCourseNames?: string[]; // Added to show assigned courses for teachers
 }
 
 export interface Class {
@@ -83,3 +85,4 @@ export interface ClassCourseAssignment {
   courseName: string; // Denormalized (e.g. "Mathematics (MATH101)")
   assignedAt: Date;
 }
+
