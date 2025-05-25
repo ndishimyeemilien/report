@@ -4,11 +4,11 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ClassForm } from "@/components/classes/ClassForm"; 
-import type { Class } from "@/types";
+import type { Class, ClassCourseAssignment } from "@/types";
 import { db } from "@/lib/firebase";
 import { collection, deleteDoc, doc, getDocs, query, orderBy, Timestamp } from "firebase/firestore";
 import { useEffect, useState } from "react";
-import { PlusCircle, Edit3, Trash2, Archive, Loader2, AlertTriangle, UserCircle, CalendarDays } from "lucide-react";
+import { PlusCircle, Edit3, Trash2, Archive, Loader2, AlertTriangle, UserCircle, CalendarDays, ListChecks } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -44,17 +44,31 @@ export default function AdminManageClassesPage() {
     setIsLoading(true);
     setError(null);
     try {
-      const q = query(collection(db, "classes"), orderBy("createdAt", "desc"));
-      const querySnapshot = await getDocs(q);
-      const classesData = querySnapshot.docs.map(doc => ({
+      const classesQuery = query(collection(db, "classes"), orderBy("createdAt", "desc"));
+      const classAssignmentsQuery = query(collection(db, "classAssignments"));
+
+      const [classesSnapshot, classAssignmentsSnapshot] = await Promise.all([
+        getDocs(classesQuery),
+        getDocs(classAssignmentsQuery),
+      ]);
+
+      const classAssignmentsData = classAssignmentsSnapshot.docs.map(doc => doc.data() as ClassCourseAssignment);
+      
+      const assignmentsCountMap = new Map<string, number>();
+      classAssignmentsData.forEach(assignment => {
+        assignmentsCountMap.set(assignment.classId, (assignmentsCountMap.get(assignment.classId) || 0) + 1);
+      });
+
+      const classesData = classesSnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
         createdAt: (doc.data().createdAt as Timestamp)?.toDate(), 
         updatedAt: (doc.data().updatedAt as Timestamp)?.toDate(),
+        assignedCoursesCount: assignmentsCountMap.get(doc.id) || 0,
       })) as Class[];
       setClasses(classesData);
     } catch (err: any) {
-      console.error("Error fetching classes: ", err);
+      console.error("Error fetching classes and assignments: ", err);
       setError("Failed to load classes. Please try again.");
       toast({ title: "Error", description: "Failed to load classes.", variant: "destructive" });
     } finally {
@@ -187,6 +201,10 @@ export default function AdminManageClassesPage() {
                                 Managed by: {classItem.secretaryName.split('@')[0]}
                               </Badge>
                             )}
+                             <Badge variant="outline" className="text-xs">
+                                <ListChecks className="mr-1.5 h-3 w-3" />
+                                Assigned Courses: {classItem.assignedCoursesCount || 0}
+                              </Badge>
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
@@ -234,3 +252,4 @@ export default function AdminManageClassesPage() {
     </div>
   );
 }
+

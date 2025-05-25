@@ -73,6 +73,7 @@ export interface Class {
   academicYear?: string; // e.g., "2023-2024"
   secretaryId?: string; // UID of the secretary who manages the class
   secretaryName?: string; // Denormalized name of the secretary
+  assignedCoursesCount?: number; // New: Count of courses assigned to this class
   createdAt: Date;
   updatedAt: Date;
 }
