@@ -1,3 +1,4 @@
+
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -16,10 +17,10 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { db } from "@/lib/firebase";
-import type { Class } from "@/types";
-import { addDoc, collection, doc, serverTimestamp, updateDoc, type FieldValue, deleteField } from "firebase/firestore";
+import type { Class, SystemSettings } from "@/types";
+import { addDoc, collection, doc, serverTimestamp, updateDoc, type FieldValue, deleteField, getDoc } from "firebase/firestore";
 import { useAuth } from "@/context/AuthContext";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Loader2 } from "lucide-react";
 
 const classFormSchema = z.object({
@@ -39,19 +40,43 @@ export function ClassForm({ initialData, onClose }: ClassFormProps) {
   const { toast } = useToast();
   const { userProfile } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
+  const [defaultAcademicYear, setDefaultAcademicYear] = useState<string>("");
+  const [isLoadingDefaults, setIsLoadingDefaults] = useState(!initialData); // Only load defaults for new classes
 
   const form = useForm<ClassFormValues>({
     resolver: zodResolver(classFormSchema),
-    defaultValues: initialData ? {
-      name: initialData.name,
-      description: initialData.description || "",
-      academicYear: initialData.academicYear || "",
-    } : {
-      name: "",
-      description: "",
-      academicYear: "",
+    defaultValues: {
+      name: initialData?.name || "",
+      description: initialData?.description || "",
+      academicYear: initialData?.academicYear || "",
     },
   });
+
+  useEffect(() => {
+    const fetchSystemDefaults = async () => {
+      if (!initialData) { // Only fetch for new classes
+        setIsLoadingDefaults(true);
+        try {
+          const settingsRef = doc(db, "systemSettings", "generalConfig");
+          const settingsSnap = await getDoc(settingsRef);
+          if (settingsSnap.exists()) {
+            const settings = settingsSnap.data() as SystemSettings;
+            if (settings.defaultAcademicYear) {
+              setDefaultAcademicYear(settings.defaultAcademicYear);
+              form.setValue("academicYear", settings.defaultAcademicYear); // Pre-fill form
+            }
+          }
+        } catch (error) {
+          console.error("Error fetching system defaults for ClassForm:", error);
+          // Non-critical, form will just not have a default
+        } finally {
+          setIsLoadingDefaults(false);
+        }
+      }
+    };
+    fetchSystemDefaults();
+  }, [initialData, form]);
+
 
   const onSubmit = async (values: ClassFormValues) => {
     setIsLoading(true);
@@ -82,7 +107,7 @@ export function ClassForm({ initialData, onClose }: ClassFormProps) {
 
 
     try {
-      if (initialData) { 
+      if (initialData?.id) { 
         const classRef = doc(db, "classes", initialData.id);
         await updateDoc(classRef, dataToSave); 
         toast({ title: "Class Updated", description: `Class "${values.name}" has been successfully updated.` });
@@ -103,7 +128,8 @@ export function ClassForm({ initialData, onClose }: ClassFormProps) {
       });
     } finally {
       setIsLoading(false);
-      if (!initialData) form.reset(); 
+      // Reset form only if adding new, and reset academicYear to the fetched default or empty
+      if (!initialData?.id) form.reset({ name: "", description: "", academicYear: defaultAcademicYear || ""}); 
     }
   };
 
@@ -130,7 +156,11 @@ export function ClassForm({ initialData, onClose }: ClassFormProps) {
             <FormItem>
               <FormLabel>Academic Year (Optional)</FormLabel>
               <FormControl>
-                <Input placeholder="e.g., 2023-2024, Sept 2024 Intake" {...field} />
+                <Input 
+                  placeholder={isLoadingDefaults && !initialData ? "Loading default..." : "e.g., 2023-2024"} 
+                  {...field} 
+                  disabled={isLoadingDefaults && !initialData}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -159,8 +189,8 @@ export function ClassForm({ initialData, onClose }: ClassFormProps) {
               Cancel
             </Button>
           )}
-          <Button type="submit" disabled={isLoading} className="bg-accent hover:bg-accent/90">
-            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          <Button type="submit" disabled={isLoading || (isLoadingDefaults && !initialData)} className="bg-accent hover:bg-accent/90">
+            {(isLoading || (isLoadingDefaults && !initialData)) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {initialData ? "Update Class" : "Add Class"}
           </Button>
         </div>
@@ -168,3 +198,4 @@ export function ClassForm({ initialData, onClose }: ClassFormProps) {
     </Form>
   );
 }
+
