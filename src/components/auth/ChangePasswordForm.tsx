@@ -79,7 +79,7 @@ export function ChangePasswordForm() {
         errorMessage = "Incorrect current password. Please try again.";
         form.setError("currentPassword", { type: "manual", message: errorMessage });
       } else if (error.code === "auth/weak-password") {
-        errorMessage = "The new password is too weak.";
+        errorMessage = "The new password is too weak. It must be at least 6 characters long.";
          form.setError("newPassword", { type: "manual", message: errorMessage });
       } else if (error.code === "auth/requires-recent-login") {
         errorMessage = "This operation is sensitive and requires recent authentication. Please log out and log back in to change your password.";
