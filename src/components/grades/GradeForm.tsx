@@ -1,3 +1,4 @@
+
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -17,20 +18,20 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { db } from "@/lib/firebase";
-import type { Grade, Course, Student } from "@/types"; 
+import type { Grade, Course, Student, SystemSettings } from "@/types"; 
 import { useAuth } from "@/context/AuthContext";
-import { addDoc, collection, doc, serverTimestamp, updateDoc, query, where, getDocs, type FieldValue } from "firebase/firestore";
+import { addDoc, collection, doc, serverTimestamp, updateDoc, query, where, getDocs, type FieldValue, getDoc } from "firebase/firestore";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Loader2 } from "lucide-react";
 
-const PASS_MARK = 50; // Changed from 40 to 50
+const PASS_MARK = 50;
 
 const gradeFormSchema = z.object({
   studentId: z.string().min(1, { message: "Please select a student." }),
   marks: z.coerce.number().min(0, "Marks cannot be negative.").max(100, "Marks cannot exceed 100."),
   remarks: z.string().max(200).optional(),
-  term: z.string().optional(), // Added term, though it will be defaulted for now
+  term: z.string().optional(), 
 });
 
 type GradeFormValues = z.infer<typeof gradeFormSchema>;
@@ -48,6 +49,7 @@ export function GradeForm({ initialData, onClose, course, students }: GradeFormP
   const { currentUser, userProfile } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [isDataLoading, setIsDataLoading] = useState(false); 
+  const [defaultTerm, setDefaultTerm] = useState<string>("Term 1"); // Default fallback
 
   const form = useForm<GradeFormValues>({
     resolver: zodResolver(gradeFormSchema),
@@ -60,9 +62,34 @@ export function GradeForm({ initialData, onClose, course, students }: GradeFormP
       studentId: "",
       marks: 0,
       remarks: "",
-      term: "Term 1",
+      term: "Term 1", // This will be overridden by fetched default if adding new
     },
   });
+
+  useEffect(() => {
+    const fetchSystemDefaults = async () => {
+      if (!initialData) { // Only fetch for new grades
+        setIsDataLoading(true);
+        try {
+          const settingsRef = doc(db, "systemSettings", "generalConfig");
+          const settingsSnap = await getDoc(settingsRef);
+          if (settingsSnap.exists()) {
+            const settings = settingsSnap.data() as SystemSettings;
+            if (settings.defaultTerm) {
+              setDefaultTerm(settings.defaultTerm);
+              form.setValue("term", settings.defaultTerm); 
+            }
+          }
+        } catch (error) {
+          console.error("Error fetching system defaults for GradeForm:", error);
+        } finally {
+          setIsDataLoading(false);
+        }
+      }
+    };
+    fetchSystemDefaults();
+  }, [initialData, form]);
+
 
   const onSubmit = async (values: GradeFormValues) => {
     setIsLoading(true);
@@ -85,15 +112,21 @@ export function GradeForm({ initialData, onClose, course, students }: GradeFormP
         where("studentId", "==", values.studentId),
         where("courseId", "==", course.id)
       );
+      // Potentially add a "where("term", "==", values.term || defaultTerm)" if grades should be unique per term
       const gradeSnapshot = await getDocs(gradeQuery);
       if (!gradeSnapshot.empty) {
-        toast({
-          title: "Grade Exists",
-          description: `${selectedStudent.fullName} already has a grade recorded for ${course.name}. You can edit it from the table.`,
-          variant: "destructive",
-        });
-        setIsLoading(false);
-        return;
+        // Check if any existing grade matches the current term being submitted
+        const termForNewGrade = values.term || defaultTerm;
+        const existingGradeForTerm = gradeSnapshot.docs.find(doc => doc.data().term === termForNewGrade);
+        if (existingGradeForTerm) {
+            toast({
+                title: "Grade Exists",
+                description: `${selectedStudent.fullName} already has a grade recorded for ${course.name} in ${termForNewGrade}. You can edit it from the table.`,
+                variant: "destructive",
+            });
+            setIsLoading(false);
+            return;
+        }
       }
     }
 
@@ -107,7 +140,7 @@ export function GradeForm({ initialData, onClose, course, students }: GradeFormP
         marks: values.marks,
         status,
         remarks: values.remarks,
-        term: values.term || "Term 1", // Default to "Term 1" if not provided
+        term: initialData ? (values.term || initialData.term) : (values.term || defaultTerm),
         updatedAt: serverTimestamp(),
         enteredByTeacherId: userProfile.uid,
         enteredByTeacherEmail: userProfile.email || undefined,
@@ -135,7 +168,7 @@ export function GradeForm({ initialData, onClose, course, students }: GradeFormP
       });
     } finally {
       setIsLoading(false);
-      if (!initialData) form.reset({ studentId: "", marks: 0, remarks: "", term: "Term 1"});
+      if (!initialData) form.reset({ studentId: "", marks: 0, remarks: "", term: defaultTerm});
     }
   };
 
@@ -206,21 +239,21 @@ export function GradeForm({ initialData, onClose, course, students }: GradeFormP
             </FormItem>
           )}
         />
-         {/* Term field could be added here if it needs to be editable 
-         <FormField
+         {/* Term field is set by default, not editable in UI for now */}
+        <FormField
           control={form.control}
           name="term"
           render={({ field }) => (
-            <FormItem>
+            <FormItem className="hidden"> {/* Hidden for now, value is set programmatically */}
               <FormLabel>Term</FormLabel>
               <FormControl>
-                <Input placeholder="e.g., Term 1" {...field} />
+                <Input {...field} readOnly />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         /> 
-        */}
+        
         <div className="flex justify-end gap-2">
           {onClose && (
             <Button type="button" variant="outline" onClick={onClose} disabled={isLoading || isDataLoading}>
