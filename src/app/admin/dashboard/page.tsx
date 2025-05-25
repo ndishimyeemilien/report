@@ -2,7 +2,7 @@
 "use client";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { BookOpen, ClipboardList, Users, BarChart3, UsersRound, UserCog, Percent, ListChecks, Loader2, Users2 } from "lucide-react"; 
+import { BookOpen, ClipboardList, Users, BarChart3, UsersRound, UserCog, Percent, ListChecks, Loader2, Users2, Archive } from "lucide-react"; 
 import Link from "next/link";
 import { collection, getDocs, query, where, Timestamp, orderBy, limit } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 
 interface DashboardStats {
   totalCourses: number;
+  totalClasses: number; // Added for classes
   totalGrades: number;
   overallPassRate: number;
   totalTeachers: number;
@@ -27,6 +28,7 @@ interface DashboardStats {
 export default function DashboardPage() {
   const [statsData, setStatsData] = useState<DashboardStats>({
     totalCourses: 0,
+    totalClasses: 0, // Initialize
     totalGrades: 0,
     overallPassRate: 0,
     totalTeachers: 0,
@@ -43,6 +45,7 @@ export default function DashboardPage() {
       setStatsData(prev => ({ ...prev, loading: true, error: null }));
       try {
         const coursesSnapshot = await getDocs(collection(db, "courses"));
+        const classesSnapshot = await getDocs(collection(db, "classes")); // Fetch classes
         const gradesSnapshot = await getDocs(collection(db, "grades"));
         const studentsSnapshot = await getDocs(collection(db, "students"));
         const enrollmentsSnapshot = await getDocs(collection(db, "enrollments"));
@@ -71,6 +74,7 @@ export default function DashboardPage() {
 
         setStatsData({
           totalCourses: coursesSnapshot.size,
+          totalClasses: classesSnapshot.size, // Set total classes
           totalGrades: gradesSnapshot.size,
           overallPassRate: overallPassRate,
           totalTeachers: teachersSnapshot.size,
@@ -85,6 +89,7 @@ export default function DashboardPage() {
         console.error("Error fetching dashboard stats:", error);
         setStatsData({
           totalCourses: 0,
+          totalClasses: 0, // Reset
           totalGrades: 0,
           overallPassRate: 0,
           totalTeachers: 0,
@@ -100,10 +105,11 @@ export default function DashboardPage() {
     getStats();
   }, []);
 
-  const { totalCourses, totalGrades, overallPassRate, totalTeachers, totalStudents, totalEnrollments, totalRegisteredUsers, recentGrades, error: statsError, loading: statsLoading } = statsData;
+  const { totalCourses, totalClasses, totalGrades, overallPassRate, totalTeachers, totalStudents, totalEnrollments, totalRegisteredUsers, recentGrades, error: statsError, loading: statsLoading } = statsData;
 
   const statsCards = [
     { title: "Total Subjects", value: totalCourses.toString(), icon: BookOpen, href: "/admin/dashboard/courses", iconColor: "text-blue-500" }, 
+    { title: "Total Classes", value: totalClasses.toString(), icon: Archive, href: "/admin/dashboard/classes", iconColor: "text-orange-400" },
     { title: "Grades Recorded", value: totalGrades.toString(), icon: ClipboardList, href: "/admin/dashboard/grades", iconColor: "text-green-500" },
     { title: "Overall Pass Rate", value: overallPassRate.toFixed(1) + "%", icon: Percent, href: "/admin/dashboard/reports", iconColor: "text-teal-500" }, 
     { title: "Total Registered Users", value: totalRegisteredUsers.toString(), icon: Users2, href: "/admin/dashboard/users", iconColor: "text-sky-500" },
@@ -175,6 +181,7 @@ export default function DashboardPage() {
                     <h3 className="text-lg font-semibold mb-2 text-primary">Key Admin Functions</h3>
                     <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
                         <li><Link href="/admin/dashboard/courses" className="hover:underline text-accent">Manage subjects</Link> (add to categories/combinations, assign teachers).</li>
+                        <li><Link href="/admin/dashboard/classes" className="hover:underline text-accent">Manage classes</Link>.</li>
                         <li><Link href="/admin/dashboard/grades" className="hover:underline text-accent">View and manage all student grades</Link> (override if necessary).</li>
                         <li><Link href="/admin/dashboard/reports" className="hover:underline text-accent">Access comprehensive academic reports</Link>.</li>
                         <li>Oversee student records (via <Link href="/secretary/students" className="hover:underline text-accent">Students</Link>) and enrollments (via <Link href="/secretary/enrollments" className="hover:underline text-accent">Enrollments</Link>).</li>
@@ -218,4 +225,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-

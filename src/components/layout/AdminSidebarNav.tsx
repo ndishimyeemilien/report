@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { LayoutDashboard, BookOpen, ClipboardList, FileText, Settings, Users, UserCog, Users2 } from "lucide-react";
+import { LayoutDashboard, BookOpen, ClipboardList, FileText, Settings, Users, UserCog, Users2, Archive } from "lucide-react";
 
 export interface NavItem {
   href: string;
@@ -18,6 +18,7 @@ export interface NavItem {
 export const adminNavItems: NavItem[] = [
   { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/dashboard/courses", label: "Subjects", icon: BookOpen }, 
+  { href: "/admin/dashboard/classes", label: "Classes", icon: Archive },
   { href: "/admin/dashboard/grades", label: "Grades", icon: ClipboardList },
   { href: "/admin/dashboard/reports", label: "Reports", icon: FileText },
   { href: "/secretary/students", label: "Students", icon: Users }, // Link to secretary's student page
@@ -44,12 +45,15 @@ export default function AdminSidebarNav({ isMobile = false }: AdminSidebarNavPro
            item.href !== "/admin/settings" && 
            item.href !== "/secretary/students" && 
            item.href !== "/admin/dashboard/teachers" &&
-           item.href !== "/admin/dashboard/users"
+           item.href !== "/admin/dashboard/users" &&
+           item.href !== "/admin/dashboard/classes" // Ensure classes isn't always active
           ) ||
+          (item.href === "/admin/dashboard" && pathname === "/admin/dashboard") || // Strict match for dashboard
           (item.href === "/admin/settings" && pathname.startsWith("/admin/settings")) ||
           (item.href === "/secretary/students" && pathname.startsWith("/secretary/students")) ||
           (item.href === "/admin/dashboard/teachers" && pathname.startsWith("/admin/dashboard/teachers")) ||
-          (item.href === "/admin/dashboard/users" && pathname.startsWith("/admin/dashboard/users"));
+          (item.href === "/admin/dashboard/users" && pathname.startsWith("/admin/dashboard/users")) ||
+          (item.href === "/admin/dashboard/classes" && pathname.startsWith("/admin/dashboard/classes"));
 
 
         const buttonVariant = isActive ? "default" : "ghost";
@@ -80,4 +84,3 @@ export default function AdminSidebarNav({ isMobile = false }: AdminSidebarNavPro
     </nav>
   );
 }
-
