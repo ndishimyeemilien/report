@@ -99,6 +99,8 @@ export function RegisterForm() {
       let errorMessage = error.message || "An unexpected error occurred. Please try again.";
       if (error.code === 'auth/email-already-in-use') {
         errorMessage = "This email address is already in use by another account.";
+      } else if (error.code === 'auth/weak-password') {
+        errorMessage = "The password is too weak. It must be at least 6 characters long.";
       }
       toast({
         title: "Registration Failed",
