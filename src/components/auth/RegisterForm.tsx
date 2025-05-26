@@ -25,7 +25,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 
-const ADMIN_SECRET_CODE = "emilien&jules"; 
+const ADMIN_SECRET_CODE = "0784280330"; 
 
 const formSchema = z.object({
   email: z.string().email({ message: "Invalid email address." }),
@@ -96,7 +96,7 @@ export function RegisterForm() {
       router.push("/login");
     } catch (error: any) {
       console.error("Registration error:", error);
-      let errorMessage = error.message || "An unexpected error occurred. Please try again.";
+      let errorMessage = "An unexpected error occurred. Please try again.";
       if (error.code === 'auth/email-already-in-use') {
         errorMessage = "This email address is already in use by another account.";
       } else if (error.code === 'auth/weak-password') {
