@@ -22,12 +22,18 @@ import { addDoc, collection, doc, serverTimestamp, updateDoc, getDocs, query, or
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { Loader2 } from "lucide-react";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import { CalendarIcon } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import { format, parseISO } from "date-fns";
 
 const studentFormSchema = z.object({
   fullName: z.string().min(3, { message: "Full name must be at least 3 characters." }).max(100),
   studentSystemId: z.string().max(50).optional().describe("School's unique ID for the student, e.g., S1001"),
   email: z.string().email({ message: "Invalid email address." }).optional().or(z.literal("")),
   classId: z.string().optional(),
+  dateOfBirth: z.string().optional(), // Storing as string for simplicity, can be Date object
+  placeOfBirth: z.string().max(100).optional(),
 });
 
 type StudentFormValues = z.infer<typeof studentFormSchema>;
@@ -71,18 +77,22 @@ export function StudentForm({ initialData, onClose }: StudentFormProps) {
       studentSystemId: initialData.studentSystemId || "",
       email: initialData.email || "",
       classId: initialData.classId || "",
+      dateOfBirth: initialData.dateOfBirth ? format(parseISO(initialData.dateOfBirth), "yyyy-MM-dd") : "",
+      placeOfBirth: initialData.placeOfBirth || "",
     } : {
       fullName: "",
       studentSystemId: "",
       email: "",
       classId: "",
+      dateOfBirth: "",
+      placeOfBirth: "",
     },
   });
 
   const onSubmit = async (values: StudentFormValues) => {
     setIsLoading(true);
     
-    const studentData: Partial<Omit<Student, 'id' | 'createdAt' | 'updatedAt'>> & { updatedAt: FieldValue, studentSystemId?: string | FieldValue, email?: string | FieldValue, classId?: string | FieldValue, className?: string | FieldValue } = {
+    const studentData: Partial<Omit<Student, 'id' | 'createdAt' | 'updatedAt'>> & { updatedAt: FieldValue } & Record<string, any> = {
         fullName: values.fullName,
         updatedAt: serverTimestamp(),
     };
@@ -90,44 +100,52 @@ export function StudentForm({ initialData, onClose }: StudentFormProps) {
     // Handle optional fields: only include them if they have a value.
     if (values.studentSystemId && values.studentSystemId.trim() !== "") {
         studentData.studentSystemId = values.studentSystemId.trim();
-    } else if (initialData?.id) { // If editing and field is cleared, remove it
+    } else if (initialData?.id) { 
         studentData.studentSystemId = deleteField();
     }
 
     if (values.email && values.email.trim() !== "") {
         studentData.email = values.email.trim();
-    } else if (initialData?.id) { // If editing and field is cleared, remove it
+    } else if (initialData?.id) { 
         studentData.email = deleteField();
     }
     
-
     if (values.classId && values.classId !== NONE_CLASS_VALUE) {
       const selectedClass = classes.find(c => c.id === values.classId);
       studentData.classId = values.classId;
       studentData.className = selectedClass?.name || "";
     } else {
-      // If "None" is selected or classId is empty, remove the fields
       studentData.classId = deleteField();
       studentData.className = deleteField();
     }
+
+    if (values.dateOfBirth) {
+        studentData.dateOfBirth = values.dateOfBirth; // Already a string in 'yyyy-MM-dd' format
+    } else if (initialData?.id) {
+        studentData.dateOfBirth = deleteField();
+    }
+
+    if (values.placeOfBirth && values.placeOfBirth.trim() !== "") {
+        studentData.placeOfBirth = values.placeOfBirth.trim();
+    } else if (initialData?.id) {
+        studentData.placeOfBirth = deleteField();
+    }
     
     try {
-      if (initialData) {
+      if (initialData?.id) {
         const studentRef = doc(db, "students", initialData.id);
         await updateDoc(studentRef, studentData);
         toast({ title: "Student Updated", description: `Student "${values.fullName}" has been successfully updated.` });
       } else {
-        // For new students, add createdAt timestamp
         const dataForAdd = {
             ...studentData,
             createdAt: serverTimestamp(),
         };
-        // Remove fields that should be undefined if not set, rather than empty string from deleteField()
-        if(dataForAdd.studentSystemId === undefined) delete dataForAdd.studentSystemId;
-        if(dataForAdd.email === undefined) delete dataForAdd.email;
-        if(dataForAdd.classId === undefined) delete dataForAdd.classId;
-        if(dataForAdd.className === undefined) delete dataForAdd.className;
-
+        Object.keys(dataForAdd).forEach(key => {
+            if (dataForAdd[key] === undefined && key !== 'createdAt' && key !== 'updatedAt' && key !== 'fullName') {
+                delete dataForAdd[key];
+            }
+        });
         await addDoc(collection(db, "students"), dataForAdd);
         toast({ title: "Student Added", description: `Student "${values.fullName}" has been successfully added.` });
       }
@@ -136,13 +154,13 @@ export function StudentForm({ initialData, onClose }: StudentFormProps) {
     } catch (error: any) {
       console.error("Student form error:", error);
       toast({
-        title: initialData ? "Update Failed" : "Add Failed",
+        title: initialData?.id ? "Update Failed" : "Add Failed",
         description: error.message || "An unexpected error occurred.",
         variant: "destructive",
       });
     } finally {
       setIsLoading(false);
-      if (!initialData) form.reset(); 
+      if (!initialData?.id) form.reset({ fullName: "", studentSystemId: "", email: "", classId: "", dateOfBirth: "", placeOfBirth: ""}); 
     }
   };
 
@@ -188,6 +206,62 @@ export function StudentForm({ initialData, onClose }: StudentFormProps) {
             </FormItem>
           )}
         />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField
+            control={form.control}
+            name="dateOfBirth"
+            render={({ field }) => (
+                <FormItem className="flex flex-col">
+                <FormLabel>Date of Birth (Optional)</FormLabel>
+                 <Popover>
+                    <PopoverTrigger asChild>
+                    <FormControl>
+                        <Button
+                        variant={"outline"}
+                        className={cn(
+                            "pl-3 text-left font-normal",
+                            !field.value && "text-muted-foreground"
+                        )}
+                        >
+                        {field.value ? (
+                            format(parseISO(field.value), "PPP")
+                        ) : (
+                            <span>Pick a date</span>
+                        )}
+                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                        </Button>
+                    </FormControl>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                        mode="single"
+                        selected={field.value ? parseISO(field.value) : undefined}
+                        onSelect={(date) => field.onChange(date ? format(date, "yyyy-MM-dd") : "")}
+                        disabled={(date) =>
+                            date > new Date() || date < new Date("1900-01-01")
+                        }
+                        initialFocus
+                    />
+                    </PopoverContent>
+                </Popover>
+                <FormMessage />
+                </FormItem>
+            )}
+            />
+            <FormField
+            control={form.control}
+            name="placeOfBirth"
+            render={({ field }) => (
+                <FormItem>
+                <FormLabel>Place of Birth (Optional)</FormLabel>
+                <FormControl>
+                    <Input placeholder="e.g., Kigali" {...field} />
+                </FormControl>
+                <FormMessage />
+                </FormItem>
+            )}
+            />
+        </div>
         <FormField
           control={form.control}
           name="classId"

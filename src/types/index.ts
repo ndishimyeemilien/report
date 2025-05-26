@@ -1,5 +1,4 @@
 
-
 export interface Course {
   id: string;
   name: string; // This will now be the subject name, e.g., Mathematics
@@ -10,9 +9,6 @@ export interface Course {
   
   category: string; // e.g., "General Education", "TVET"
   combination: string; // e.g., "MCB", "Software Development"
-  // Note: The actual subjects like 'Mathematics', 'Chemistry' that were in the user's example
-  // are now represented by the 'name' field of this Course interface.
-  // A "Course" entity is an individual subject belonging to a category and combination.
 
   createdAt: Date;
   updatedAt: Date;
@@ -25,7 +21,8 @@ export interface Student {
   email?: string; // Optional
   classId?: string; // ID of the Class the student is assigned to
   className?: string; // Denormalized name of the Class
-  // Add other student-specific fields as needed, e.g., dateOfBirth, contactInfo etc.
+  dateOfBirth?: string; // New field for date of birth
+  placeOfBirth?: string; // New field for place of birth
   createdAt: Date;
   updatedAt: Date;
 }
@@ -78,7 +75,6 @@ export interface Class {
   updatedAt: Date;
 }
 
-// Represents the assignment of a "Course" (which is now a subject) to a "Class" (student group)
 export interface ClassCourseAssignment {
   id: string; // Firebase document ID
   classId: string;
@@ -95,4 +91,3 @@ export interface SystemSettings {
   updatedAt?: Date;
   updatedBy?: string; // UID of admin who last updated
 }
-

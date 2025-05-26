@@ -5,12 +5,14 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { doc, getDoc, collection, query, where, getDocs, orderBy, Timestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import type { Student, Grade } from "@/types";
+import type { Student, Grade, SystemSettings } from "@/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Loader2, AlertTriangle, UserCircle, BookOpen, Percent, CheckCircle, XCircle } from "lucide-react";
+import { ArrowLeft, Loader2, AlertTriangle, UserCircle, BookOpen, Percent, CheckCircle, XCircle, CalendarDays, MapPin } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
+import { format, parseISO } from "date-fns";
 
 const PASS_MARK = 50;
 
@@ -20,6 +22,7 @@ interface StudentReportData {
   totalMarks: number;
   averageMarks: number | null;
   overallStatus: 'Pass' | 'Fail' | 'N/A';
+  systemSettings: SystemSettings | null;
 }
 
 export default function StudentReportPage() {
@@ -76,6 +79,10 @@ export default function StudentReportPage() {
         if (averageMarks !== null) {
           overallStatus = averageMarks >= PASS_MARK ? 'Pass' : 'Fail';
         }
+
+        const settingsRef = doc(db, "systemSettings", "generalConfig");
+        const settingsSnap = await getDoc(settingsRef);
+        const systemSettingsData = settingsSnap.exists() ? settingsSnap.data() as SystemSettings : null;
         
         setReportData({
           student: studentData,
@@ -83,6 +90,7 @@ export default function StudentReportPage() {
           totalMarks,
           averageMarks,
           overallStatus,
+          systemSettings: systemSettingsData,
         });
 
       } catch (err: any) {
@@ -140,8 +148,17 @@ export default function StudentReportPage() {
     );
   }
 
-  const { student, grades, totalMarks, averageMarks, overallStatus } = reportData;
+  const { student, grades, totalMarks, averageMarks, overallStatus, systemSettings } = reportData;
 
+  const formatUserDate = (dateString: string | undefined) => {
+    if (!dateString) return "N/A";
+    try {
+      return format(parseISO(dateString), "dd/MM/yyyy");
+    } catch (e) {
+      return dateString; // Return original if parsing fails
+    }
+  };
+  
   const formatNumber = (num: number | null, precision = 1) => {
     if (num === null || num === undefined || isNaN(num)) return "N/A";
     return num.toFixed(precision);
@@ -149,36 +166,67 @@ export default function StudentReportPage() {
 
   return (
     <div className="container mx-auto py-8 space-y-6">
-      <Button onClick={() => router.back()} variant="outline" className="mb-6">
+      <Button onClick={() => router.back()} variant="outline" className="mb-6 print:hidden">
         <ArrowLeft className="mr-2 h-4 w-4" /> Back to All Reports
       </Button>
 
-      <Card className="shadow-lg">
-        <CardHeader className="border-b pb-4">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-            <div>
-                <CardTitle className="text-2xl text-primary">Student Academic Report</CardTitle>
-                <CardDescription>Detailed academic performance for {student.fullName}.</CardDescription>
+      <Card className="shadow-lg print:shadow-none print:border-none">
+        <CardHeader className="border-b pb-4 print:border-none">
+          <div className="text-center mb-4">
+            <p className="text-sm font-medium text-muted-foreground">REPUBLIC OF RWANDA</p>
+            <p className="text-sm font-medium text-muted-foreground">MINISTRY OF EDUCATION</p>
+            <h1 className="text-xl font-bold text-primary mt-2">COLLEGE DE BETHEL / APARU</h1>
+            <p className="text-xs text-muted-foreground">P.O.BOX: 70 RUHANGO | Tel: 0788836651 / 0784522178</p>
+            {/* Placeholder for school logo */}
+            {/* <img src="/placeholder-logo.png" alt="School Logo" className="h-16 w-auto mx-auto my-2" data-ai-hint="school emblem" /> */}
+          </div>
+          
+          <Separator className="my-3"/>
+
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-2">
+            <h2 className="text-2xl font-bold text-center text-primary flex-grow">REPORT CARD</h2>
+            <div className="text-right text-sm">
+                <p>School Year: {systemSettings?.defaultAcademicYear || "YYYY-YYYY"}</p>
+                <p>Term: {systemSettings?.defaultTerm || "N"}</p>
             </div>
-            {/* Placeholder for school logo or emblem */}
-            {/* <img src="/placeholder-logo.png" alt="School Logo" className="h-16 w-auto" data-ai-hint="school emblem" /> */}
           </div>
         </CardHeader>
         <CardContent className="pt-6 space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 p-4 border rounded-lg bg-muted/30">
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Student Name</p>
-              <p className="text-lg font-semibold text-foreground">{student.fullName}</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2 p-4 border rounded-lg bg-muted/30 text-sm">
+            <div className="flex">
+              <p className="font-medium text-muted-foreground w-28">Student Name:</p>
+              <p className="font-semibold text-foreground">{student.fullName}</p>
             </div>
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Student ID</p>
-              <p className="text-lg font-semibold text-foreground">{student.studentSystemId || "N/A"}</p>
+             <div className="flex">
+              <p className="font-medium text-muted-foreground w-28">Class:</p>
+              <p className="font-semibold text-foreground">{student.className || "N/A"}</p>
             </div>
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Class</p>
-              <p className="text-lg font-semibold text-foreground">{student.className || "N/A"}</p>
+            <div className="flex">
+              <p className="font-medium text-muted-foreground w-28">Date of Birth:</p>
+              <p className="text-foreground flex items-center">
+                <CalendarDays className="mr-1.5 h-4 w-4 text-muted-foreground" /> 
+                {formatUserDate(student.dateOfBirth) || "N/A"}
+              </p>
             </div>
-            {/* Add more student details here if needed, e.g., Academic Year, Term */}
+            <div className="flex">
+              <p className="font-medium text-muted-foreground w-28">Place of Birth:</p>
+              <p className="text-foreground flex items-center">
+                 <MapPin className="mr-1.5 h-4 w-4 text-muted-foreground" /> 
+                 {student.placeOfBirth || "N/A"}
+              </p>
+            </div>
+            <div className="flex">
+              <p className="font-medium text-muted-foreground w-28">ID No.:</p>
+              <p className="text-foreground">{student.studentSystemId || "N/A"}</p>
+            </div>
+            <div className="flex">
+              <p className="font-medium text-muted-foreground w-28">N. Students:</p>
+              <p className="text-foreground">-- (Placeholder)</p>
+            </div>
+             <div className="flex">
+              <p className="font-medium text-muted-foreground w-28">Conduct:</p>
+              <p className="text-foreground">-- (Placeholder)</p>
+            </div>
           </div>
 
           <h3 className="text-xl font-semibold text-foreground pt-4 flex items-center">
@@ -186,7 +234,7 @@ export default function StudentReportPage() {
             Subject Marks
           </h3>
           {grades.length > 0 ? (
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto border rounded-md">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -214,11 +262,11 @@ export default function StudentReportPage() {
               </Table>
             </div>
           ) : (
-            <p className="text-muted-foreground italic">No grades recorded for this student yet.</p>
+            <p className="text-muted-foreground italic text-center py-4">No grades recorded for this student yet.</p>
           )}
         </CardContent>
         {grades.length > 0 && (
-          <CardFooter className="border-t pt-6 mt-6 flex-col items-start space-y-4 sm:flex-row sm:justify-between sm:items-center sm:space-y-0">
+          <CardFooter className="border-t pt-6 mt-6 flex-col items-start space-y-4 sm:flex-row sm:justify-between sm:items-center sm:space-y-0 print:border-none">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full">
               <div className="flex items-center space-x-2 p-3 border rounded-md bg-card">
                  <Percent className="h-7 w-7 text-primary" />
@@ -248,22 +296,35 @@ export default function StudentReportPage() {
         )}
       </Card>
       
-      {/* Placeholder for Teacher's Remarks and Head Teacher's Remarks */}
-      <Card className="mt-6">
+      <Card className="mt-6 print:mt-10">
         <CardHeader>
-            <CardTitle className="text-lg">Additional Remarks</CardTitle>
+            <CardTitle className="text-lg">Additional Remarks & Signatures</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-6">
             <div>
+                <p className="font-medium text-sm text-muted-foreground">Observations:</p>
+                <p className="text-sm italic h-12 border-b border-dashed">__________________________________________________________________________________________________________________</p>
+            </div>
+             <div>
                 <p className="font-medium text-sm text-muted-foreground">Class Teacher's Remarks:</p>
-                <p className="text-sm italic h-10 border-b">_________________________________________________________</p>
+                <p className="text-sm italic h-12 border-b border-dashed">__________________________________________________________________________________________________________________</p>
             </div>
              <div>
                 <p className="font-medium text-sm text-muted-foreground">Head Teacher's Remarks:</p>
-                <p className="text-sm italic h-10 border-b">_________________________________________________________</p>
+                <p className="text-sm italic h-12 border-b border-dashed">__________________________________________________________________________________________________________________</p>
+            </div>
+            <div className="grid grid-cols-2 gap-8 pt-8">
+                 <div>
+                    <p className="font-medium text-sm text-muted-foreground">Teacher Signature:</p>
+                    <p className="text-sm italic h-12 border-b border-dashed"></p>
+                </div>
+                 <div>
+                    <p className="font-medium text-sm text-muted-foreground">Parent Signature:</p>
+                    <p className="text-sm italic h-12 border-b border-dashed"></p>
+                </div>
             </div>
         </CardContent>
-        <CardFooter className="text-xs text-muted-foreground">
+        <CardFooter className="text-xs text-muted-foreground print:hidden">
             Report Generated On: {new Date().toLocaleDateString()}
         </CardFooter>
       </Card>
@@ -271,4 +332,3 @@ export default function StudentReportPage() {
     </div>
   );
 }
-
