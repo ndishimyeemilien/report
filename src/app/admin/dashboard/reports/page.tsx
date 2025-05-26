@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { collection, getDocs, query, orderBy, Timestamp, where } from "firebase/firestore";
+import { collection, getDocs, query, orderBy, Timestamp, where, doc, getDoc } from "firebase/firestore"; // Added doc, getDoc
 import { db } from "@/lib/firebase";
 import type { Course, Grade, Student, Enrollment, SystemSettings } from "@/types"; // Course now means Subject
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
