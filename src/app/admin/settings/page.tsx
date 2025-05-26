@@ -71,7 +71,7 @@ export default function AdminSettingsPage() {
       return;
     }
 
-    if (userProfile.role !== 'Admin') {
+    if (!(userProfile.role === 'Admin' || userProfile.role === 'Teacher')) {
       toast({ title: "Unauthorized", description: "You do not have permission to change system settings.", variant: "destructive" });
       setIsSavingSettings(false);
       return;

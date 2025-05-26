@@ -1,3 +1,4 @@
+
 "use client";
 import SecretaryHeader from "@/components/layout/SecretaryHeader"; 
 import SecretarySidebar from "@/components/layout/SecretarySidebar"; 
@@ -18,7 +19,8 @@ export default function SecretaryLayout({
     if (!loading) {
       if (!currentUser) {
         router.push("/login");
-      } else if (userProfile && userProfile.role !== 'Secretary' && userProfile.role !== 'Admin') { 
+      } else if (userProfile && !(userProfile.role === 'Secretary' || userProfile.role === 'Admin' || userProfile.role === 'Teacher')) { 
+        // Allow Secretary, Admin, or Teacher (acting as Admin)
         router.push("/login?error=unauthorized_secretary"); 
       }
     }
@@ -32,7 +34,7 @@ export default function SecretaryLayout({
     );
   }
 
-  if (!currentUser || !userProfile || (userProfile.role !== 'Secretary' && userProfile.role !== 'Admin')) {
+  if (!currentUser || !userProfile || !(userProfile.role === 'Secretary' || userProfile.role === 'Admin' || userProfile.role === 'Teacher')) {
     return null; 
   }
 
@@ -48,3 +50,4 @@ export default function SecretaryLayout({
     </div>
   );
 }
+

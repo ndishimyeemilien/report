@@ -19,9 +19,8 @@ export default function AdminLayout({
     if (!loading) {
       if (!currentUser) {
         router.push("/login");
-      } else if (userProfile && userProfile.role !== 'Admin') {
-        // If logged in but not an Admin, redirect to login or an unauthorized page
-        // For simplicity, redirecting to login. A dedicated /unauthorized page would be better.
+      } else if (userProfile && !(userProfile.role === 'Admin' || userProfile.role === 'Teacher')) {
+        // If logged in but not an Admin or Teacher, redirect
         router.push("/login?error=unauthorized"); 
       }
     }
@@ -35,10 +34,8 @@ export default function AdminLayout({
     );
   }
 
-  // Ensure user is an Admin before rendering the layout
-  if (!currentUser || !userProfile || userProfile.role !== 'Admin') {
-    // This fallback might be hit if useEffect hasn't redirected yet or for edge cases.
-    // Returning null prevents rendering the admin layout for non-admins.
+  // Ensure user is an Admin or Teacher before rendering the layout
+  if (!currentUser || !userProfile || !(userProfile.role === 'Admin' || userProfile.role === 'Teacher')) {
     return null; 
   }
 
@@ -54,3 +51,4 @@ export default function AdminLayout({
     </div>
   );
 }
+

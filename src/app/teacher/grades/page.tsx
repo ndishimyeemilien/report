@@ -193,7 +193,7 @@ export default function TeacherGradesPage() {
 
 
   const handleEdit = (grade: Grade) => {
-    if (grade.enteredByTeacherId !== userProfile?.uid && userProfile?.role !== 'Admin') {
+    if (grade.enteredByTeacherId !== userProfile?.uid && !(userProfile?.role === 'Admin' || userProfile?.role === 'Teacher')) {
         toast({title: "Unauthorized", description: "You can only edit grades you entered.", variant: "destructive"});
         return;
     }
@@ -215,7 +215,7 @@ export default function TeacherGradesPage() {
   };
 
   const handleDelete = async (grade: Grade) => {
-     if (grade.enteredByTeacherId !== userProfile?.uid && userProfile?.role !== 'Admin') {
+     if (grade.enteredByTeacherId !== userProfile?.uid && !(userProfile?.role === 'Admin' || userProfile?.role === 'Teacher')) {
         toast({title: "Unauthorized", description: "You can only delete grades you entered.", variant: "destructive"});
         return;
     }
@@ -289,7 +289,7 @@ export default function TeacherGradesPage() {
 
         if (!gradeSnapshot.empty) { 
           const existingGradeDoc = gradeSnapshot.docs[0];
-          if (existingGradeDoc.data().enteredByTeacherId !== userProfile.uid && userProfile.role !== 'Admin') {
+          if (existingGradeDoc.data().enteredByTeacherId !== userProfile.uid && !(userProfile.role === 'Admin' || userProfile.role === 'Teacher')) {
             failCount++;
             errors.push(`Grade for ${student.fullName} (ID: ${studentSystemIdTrimmed}) was entered by another user and cannot be overwritten. Skipped.`);
             continue;
@@ -520,7 +520,7 @@ export default function TeacherGradesPage() {
                     <TableBody>
                         {filteredGrades.map((grade) => {
                             const studentDetails = studentsInSelectedClass.find(s => s.id === grade.studentId);
-                            const canModify = grade.enteredByTeacherId === userProfile?.uid || userProfile?.role === 'Admin';
+                            const canModify = grade.enteredByTeacherId === userProfile?.uid || userProfile?.role === 'Admin' || userProfile?.role === 'Teacher';
                             return (
                             <TableRow key={grade.id}>
                                 <TableCell className="font-medium">{grade.studentName}</TableCell>
@@ -599,3 +599,4 @@ export default function TeacherGradesPage() {
     </React.Fragment>
   );
 }
+
