@@ -114,7 +114,7 @@ export function CourseForm({ initialData, onClose, selectedCategory, selectedCom
     const dataForFirestore: {
         name: string;
         code: string;
-        description?: string | null;
+        description?: string | null | FieldValue;
         teacherId?: string | FieldValue; 
         teacherName?: string | null | FieldValue; 
         category: string;
@@ -132,14 +132,14 @@ export function CourseForm({ initialData, onClose, selectedCategory, selectedCom
     if (values.description && values.description.trim() !== "") {
         dataForFirestore.description = values.description;
     } else {
-        dataForFirestore.description = null; 
+        dataForFirestore.description = initialData?.id ? deleteField() : null; 
     }
     
     if (values.teacherId && values.teacherId !== NONE_TEACHER_VALUE) {
         const selectedTeacher = teachers.find(t => t.uid === values.teacherId);
         dataForFirestore.teacherId = values.teacherId;
-        dataForFirestore.teacherName = selectedTeacher?.email || null;
-    } else if (initialData?.id) { 
+        dataForFirestore.teacherName = selectedTeacher?.email || null; // Store email as teacherName
+    } else { // If "None" is selected or teacherId is empty
         dataForFirestore.teacherId = deleteField();
         dataForFirestore.teacherName = deleteField();
     }
@@ -152,6 +152,12 @@ export function CourseForm({ initialData, onClose, selectedCategory, selectedCom
         toast({ title: "Subject Updated", description: `Subject "${values.name}" has been successfully updated.` });
       } else { 
         dataForFirestore.createdAt = serverTimestamp();
+        // Ensure no undefined fields are sent for new docs, except for description which can be null
+        Object.keys(dataForFirestore).forEach(key => {
+             if (dataForFirestore[key as keyof typeof dataForFirestore] === undefined && key !== 'description') {
+                 delete dataForFirestore[key as keyof typeof dataForFirestore];
+             }
+        });
         await addDoc(collection(db, "courses"), dataForFirestore);
         toast({ title: "Subject Added", description: `Subject "${values.name}" has been successfully added to ${values.combination}.` });
       }
@@ -262,7 +268,7 @@ export function CourseForm({ initialData, onClose, selectedCategory, selectedCom
                     <SelectItem value="loading-teachers-placeholder" disabled>Loading...</SelectItem> 
                   ) : (
                     <>
-                      <SelectItem value={NONE_TEACHER_VALUE}>None</SelectItem>
+                      <SelectItem value={NONE_TEACHER_VALUE}>-- None --</SelectItem>
                       {teachers.length === 0 && (
                         <SelectItem value="no-teachers-placeholder" disabled>No teachers available.</SelectItem> 
                       )}
@@ -286,7 +292,7 @@ export function CourseForm({ initialData, onClose, selectedCategory, selectedCom
             </Button>
           )}
           <Button type="submit" disabled={isLoading || isTeachersLoading} className="bg-accent hover:bg-accent/90">
-            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {(isLoading || isTeachersLoading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {initialData?.id ? "Update Subject" : "Add Subject"}
           </Button>
         </div>
@@ -294,3 +300,4 @@ export function CourseForm({ initialData, onClose, selectedCategory, selectedCom
     </Form>
   );
 }
+
