@@ -44,8 +44,12 @@ import { Badge } from "@/components/ui/badge";
 
 interface StudentExcelRow {
   fullName: string;
-  studentSystemId?: string | number; 
+  studentSystemId?: string; 
   email?: string;
+  // Add other optional fields you might want from Excel like dateOfBirth, placeOfBirth, className
+  dateOfBirth?: string; 
+  placeOfBirth?: string;
+  className?: string; // If className is in Excel and you want to link to an existing Class
 }
 
 export default function SecretaryStudentsPage() {
@@ -132,16 +136,8 @@ export default function SecretaryStudentsPage() {
         errors.push("A student record was skipped due to missing full name.");
         continue;
       }
-
-      type StudentFirestoreData = {
-        fullName: string;
-        studentSystemId?: string;
-        email?: string;
-        createdAt: FieldValue;
-        updatedAt: FieldValue;
-      };
       
-      const dataForFirestore: StudentFirestoreData = {
+      const dataForFirestore: Partial<Omit<Student, 'id'>> & { createdAt: FieldValue, updatedAt: FieldValue } = {
         fullName: fullNameTrimmed,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
@@ -156,6 +152,28 @@ export default function SecretaryStudentsPage() {
       if (emailTrimmed) { 
         dataForFirestore.email = emailTrimmed;
       }
+      
+      const dobTrimmed = String(row.dateOfBirth ?? '').trim();
+      if (dobTrimmed) {
+        // Basic validation, ideally use date-fns for parsing robustness
+        dataForFirestore.dateOfBirth = dobTrimmed; 
+      }
+
+      const pobTrimmed = String(row.placeOfBirth ?? '').trim();
+      if (pobTrimmed) {
+        dataForFirestore.placeOfBirth = pobTrimmed;
+      }
+
+      // If className is provided in Excel, try to find classId
+      const classNameTrimmed = String(row.className ?? '').trim();
+      if (classNameTrimmed) {
+        // This requires fetching classes or having them available to map className to classId
+        // For simplicity in this example, we're directly storing className if provided
+        // In a real app, you'd query for classId based on className or show an error if not found
+        dataForFirestore.className = classNameTrimmed; 
+        // dataForFirestore.classId = await findClassIdByName(classNameTrimmed); // Hypothetical function
+      }
+
 
       try {
         if (dataForFirestore.studentSystemId) {
@@ -226,10 +244,10 @@ export default function SecretaryStudentsPage() {
         isOpen={isImportDialogOpen}
         onClose={() => setIsImportDialogOpen(false)}
         onImport={handleStudentImport}
-        templateHeaders={["fullName", "studentSystemId", "email"]}
+        templateHeaders={["fullName", "studentSystemId", "email", "dateOfBirth", "placeOfBirth", "className"]}
         templateFileName="students_template.xlsx"
         dialogTitle="Import Students from Excel"
-        dialogDescription="Upload an Excel file (.xlsx or .xls) with student data. Ensure column headers match: fullName, studentSystemId (optional), email (optional)."
+        dialogDescription="Upload an Excel file (.xlsx or .xls) with student data. Required headers: fullName. Optional: studentSystemId, email, dateOfBirth (YYYY-MM-DD), placeOfBirth, className."
       />
 
       {isLoading && (

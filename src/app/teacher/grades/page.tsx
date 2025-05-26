@@ -10,7 +10,7 @@ import { useAuth } from "@/context/AuthContext";
 import { collection, deleteDoc, doc, getDocs, query, orderBy, Timestamp, where, documentId, addDoc, serverTimestamp, updateDoc, type FieldValue } from "firebase/firestore";
 import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { PlusCircle, Edit3, Trash2, ClipboardList, Loader2, AlertTriangle, User, Info, Filter, UploadCloud, Search } from "lucide-react";
-import { Input } from "@/components/ui/input"; // Added Input for filter
+import { Input } from "@/components/ui/input"; 
 import {
   Dialog,
   DialogContent,
@@ -78,7 +78,7 @@ export default function TeacherGradesPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingGrade, setEditingGrade] = useState<Grade | null>(null);
   const [isImportGradesDialogOpen, setIsImportGradesDialogOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState(""); // State for search filter
+  const [searchTerm, setSearchTerm] = useState(""); 
   const { toast } = useToast();
 
   useEffect(() => {
@@ -139,7 +139,7 @@ export default function TeacherGradesPage() {
         const studentIdsInClass = classStudents.map(s => s.id);
         
         const studentIdBatches: string[][] = [];
-        for (let i = 0; i < studentIdsInClass.length; i += 30) {
+        for (let i = 0; i < studentIdsInClass.length; i += 30) { // Firestore 'in' query limit
             studentIdBatches.push(studentIdsInClass.slice(i, i + 30));
         }
 
@@ -273,7 +273,7 @@ export default function TeacherGradesPage() {
         marks: marks,
         status,
         remarks: row.remarks || "",
-        term: "Term 1", 
+        term: "Term 1", // Consider making term selectable or part of Excel
         enteredByTeacherId: userProfile.uid,
         enteredByTeacherEmail: userProfile.email || undefined,
         updatedAt: serverTimestamp(),
@@ -284,11 +284,12 @@ export default function TeacherGradesPage() {
           collection(db, "grades"),
           where("studentId", "==", student.id),
           where("courseId", "==", currentSubjectForForm.id)
+          // Consider adding where("term", "==", gradePayload.term) if overwriting specific term grades
         );
         const gradeSnapshot = await getDocs(gradeQuery);
 
         if (!gradeSnapshot.empty) { 
-          const existingGradeDoc = gradeSnapshot.docs[0];
+          const existingGradeDoc = gradeSnapshot.docs[0]; // Assuming one grade per student per course for simplicity here
           if (existingGradeDoc.data().enteredByTeacherId !== userProfile.uid && !(userProfile.role === 'Admin' || userProfile.role === 'Teacher')) {
             failCount++;
             errors.push(`Grade for ${student.fullName} (ID: ${studentSystemIdTrimmed}) was entered by another user and cannot be overwritten. Skipped.`);
@@ -497,7 +498,7 @@ export default function TeacherGradesPage() {
               </div>
             </CardHeader>
             <CardContent>
-              <ScrollArea className="h-[calc(100vh-34rem)]"> {/* Adjusted height for filter input */}
+              <ScrollArea className="h-[calc(100vh-34rem)]"> 
                 {filteredGrades.length === 0 && searchTerm && (
                    <div className="text-center py-10">
                      <Search className="mx-auto h-12 w-12 text-muted-foreground" data-ai-hint="search empty" />
