@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { AlertTriangle, LockKeyhole, BookCog, Loader2 } from "lucide-react";
+import { AlertTriangle, LockKeyhole, BookCopy, Loader2 } from "lucide-react"; // Changed BookCog to BookCopy
 import { ChangePasswordForm } from "@/components/auth/ChangePasswordForm";
 import { useAuth } from "@/context/AuthContext";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -127,7 +127,7 @@ export default function AdminSettingsPage() {
         <Card className="lg:col-span-3">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <BookCog className="h-5 w-5 text-primary" />
+              <BookCopy className="h-5 w-5 text-primary" /> {/* Changed BookCog to BookCopy */}
               System Defaults
             </CardTitle>
             <CardDescription>Set system-wide default values.</CardDescription>
