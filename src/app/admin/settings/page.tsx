@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { AlertTriangle, LockKeyhole, BookCopy, Loader2 } from "lucide-react"; // Changed BookCog to BookCopy
+import { AlertTriangle, LockKeyhole, BookCopy, Loader2 } from "lucide-react";
 import { ChangePasswordForm } from "@/components/auth/ChangePasswordForm";
 import { useAuth } from "@/context/AuthContext";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -65,17 +65,24 @@ export default function AdminSettingsPage() {
 
   const onSaveSystemSettings = async (values: SystemSettingsFormValues) => {
     setIsSavingSettings(true);
-    if (!currentUser) {
+    if (!currentUser || !userProfile) {
       toast({ title: "Error", description: "Authentication required.", variant: "destructive" });
       setIsSavingSettings(false);
       return;
     }
+
+    if (userProfile.role !== 'Admin') {
+      toast({ title: "Unauthorized", description: "You do not have permission to change system settings.", variant: "destructive" });
+      setIsSavingSettings(false);
+      return;
+    }
+
     try {
       const settingsRef = doc(db, "systemSettings", "generalConfig");
       const dataToSave: SystemSettings = {
         defaultAcademicYear: values.defaultAcademicYear || "",
         defaultTerm: values.defaultTerm || "",
-        updatedAt: serverTimestamp() as unknown as Date, // Casting for serverTimestamp
+        updatedAt: serverTimestamp() as unknown as Date, 
         updatedBy: currentUser.uid,
       };
       await setDoc(settingsRef, dataToSave, { merge: true });
@@ -127,7 +134,7 @@ export default function AdminSettingsPage() {
         <Card className="lg:col-span-3">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <BookCopy className="h-5 w-5 text-primary" /> {/* Changed BookCog to BookCopy */}
+              <BookCopy className="h-5 w-5 text-primary" /> 
               System Defaults
             </CardTitle>
             <CardDescription>Set system-wide default values.</CardDescription>
