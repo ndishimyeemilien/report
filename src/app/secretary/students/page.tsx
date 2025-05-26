@@ -45,11 +45,9 @@ import { Badge } from "@/components/ui/badge";
 interface StudentExcelRow {
   fullName: string;
   studentSystemId?: string; 
-  email?: string;
-  // Add other optional fields you might want from Excel like dateOfBirth, placeOfBirth, className
   dateOfBirth?: string; 
   placeOfBirth?: string;
-  className?: string; // If className is in Excel and you want to link to an existing Class
+  className?: string;
 }
 
 export default function SecretaryStudentsPage() {
@@ -147,15 +145,9 @@ export default function SecretaryStudentsPage() {
       if (studentIdTrimmed) {
         dataForFirestore.studentSystemId = studentIdTrimmed;
       }
-
-      const emailTrimmed = String(row.email ?? '').trim();
-      if (emailTrimmed) { 
-        dataForFirestore.email = emailTrimmed;
-      }
       
       const dobTrimmed = String(row.dateOfBirth ?? '').trim();
       if (dobTrimmed) {
-        // Basic validation, ideally use date-fns for parsing robustness
         dataForFirestore.dateOfBirth = dobTrimmed; 
       }
 
@@ -164,14 +156,9 @@ export default function SecretaryStudentsPage() {
         dataForFirestore.placeOfBirth = pobTrimmed;
       }
 
-      // If className is provided in Excel, try to find classId
       const classNameTrimmed = String(row.className ?? '').trim();
       if (classNameTrimmed) {
-        // This requires fetching classes or having them available to map className to classId
-        // For simplicity in this example, we're directly storing className if provided
-        // In a real app, you'd query for classId based on className or show an error if not found
         dataForFirestore.className = classNameTrimmed; 
-        // dataForFirestore.classId = await findClassIdByName(classNameTrimmed); // Hypothetical function
       }
 
 
@@ -244,10 +231,10 @@ export default function SecretaryStudentsPage() {
         isOpen={isImportDialogOpen}
         onClose={() => setIsImportDialogOpen(false)}
         onImport={handleStudentImport}
-        templateHeaders={["fullName", "studentSystemId", "email", "dateOfBirth", "placeOfBirth", "className"]}
+        templateHeaders={["fullName", "studentSystemId", "dateOfBirth", "placeOfBirth", "className"]}
         templateFileName="students_template.xlsx"
         dialogTitle="Import Students from Excel"
-        dialogDescription="Upload an Excel file (.xlsx or .xls) with student data. Required headers: fullName. Optional: studentSystemId, email, dateOfBirth (YYYY-MM-DD), placeOfBirth, className."
+        dialogDescription="Upload an Excel file (.xlsx or .xls) with student data. Required headers: fullName. Optional: studentSystemId, dateOfBirth (YYYY-MM-DD or MM/DD/YYYY), placeOfBirth, className."
       />
 
       {isLoading && (
@@ -359,3 +346,6 @@ export default function SecretaryStudentsPage() {
     </div>
   );
 }
+
+
+    
