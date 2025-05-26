@@ -26,6 +26,7 @@ import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover
 import { CalendarIcon } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { format, parseISO } from "date-fns";
+import { cn } from "@/lib/utils"; // Added missing import
 
 const studentFormSchema = z.object({
   fullName: z.string().min(3, { message: "Full name must be at least 3 characters." }).max(100),
@@ -315,3 +316,4 @@ export function StudentForm({ initialData, onClose }: StudentFormProps) {
     </Form>
   );
 }
+
