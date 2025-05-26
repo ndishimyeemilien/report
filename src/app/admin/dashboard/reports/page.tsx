@@ -4,7 +4,7 @@
 import { useEffect, useState } from "react";
 import { collection, getDocs, query, orderBy, Timestamp, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import type { Course, Grade, Student, Enrollment } from "@/types"; // Course now means Subject
+import type { Course, Grade, Student, Enrollment, SystemSettings } from "@/types"; // Course now means Subject
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -60,6 +60,7 @@ interface ReportData {
     count: number;
   }>;
   totalSubjects: number;
+  systemSettings: SystemSettings | null;
 }
 
 const PASS_MARK = 50;
@@ -152,13 +153,15 @@ export default function ReportsPage() {
       const gradesQuery = query(collection(db, "grades"));
       const studentsQuery = query(collection(db, "students"), orderBy("fullName"));
       const enrollmentsQuery = query(collection(db, "enrollments"));
+      const settingsRef = doc(db, "systemSettings", "generalConfig");
 
 
-      const [subjectsSnapshot, gradesSnapshot, studentsSnapshot, enrollmentsSnapshot] = await Promise.all([
+      const [subjectsSnapshot, gradesSnapshot, studentsSnapshot, enrollmentsSnapshot, settingsSnap] = await Promise.all([
         getDocs(subjectsQuery),
         getDocs(gradesQuery),
-        getDocs(studentsSnapshot),
+        getDocs(studentsQuery),
         getDocs(enrollmentsQuery),
+        getDoc(settingsRef),
       ]);
 
       const subjects = subjectsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Course));
@@ -173,8 +176,9 @@ export default function ReportsPage() {
       });
       const students = studentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data()} as Student));
       const enrollments = enrollmentsSnapshot.docs.map(doc => ({id: doc.id, ...doc.data()} as Enrollment));
+      const systemSettingsData = settingsSnap.exists() ? settingsSnap.data() as SystemSettings : null;
 
-      generateReportData(subjects, grades, students, enrollments);
+      generateReportData(subjects, grades, students, enrollments, systemSettingsData);
 
     } catch (err: any) {
       console.error("Error fetching report data:", err);
@@ -189,7 +193,7 @@ export default function ReportsPage() {
     fetchAndProcessData();
   }, []);
 
-  const generateReportData = (subjects: Course[], grades: Grade[], students: Student[], enrollments: Enrollment[]) => {
+  const generateReportData = (subjects: Course[], grades: Grade[], students: Student[], enrollments: Enrollment[], systemSettings: SystemSettings | null) => {
     let totalMarksOverall = 0;
     let passCountOverall = 0;
     let highestMarkOverall: number | null = null;
@@ -305,6 +309,7 @@ export default function ReportsPage() {
       studentPerformance,
       marksDistribution,
       totalSubjects: subjects.length,
+      systemSettings,
     });
   };
 
