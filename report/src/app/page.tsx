@@ -10,6 +10,7 @@ import Logo from "@/components/shared/Logo";
 import { useTranslation } from "react-i18next";
 import LanguageSwitcher from "@/components/shared/LanguageSwitcher";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 
 export default function HomePage() {
   const { currentUser, userProfile, loading } = useAuth();
@@ -26,6 +27,7 @@ export default function HomePage() {
         } else if (userProfile.role === 'Secretary') {
           router.replace("/secretary/dashboard");
         } else {
+          // Fallback or unhandled role
           router.replace("/login"); 
         }
       }
@@ -92,7 +94,7 @@ export default function HomePage() {
               <Card key={feature.key} className="bg-card text-card-foreground p-6 rounded-lg shadow-md text-left hover:shadow-lg transition-shadow flex flex-col">
                 <CardHeader className="p-0 mb-3 flex-shrink-0">
                   <div className="flex justify-center md:justify-start mb-2">
-                    <feature.icon className="h-10 w-10 text-accent" />
+                    <feature.icon className={cn("h-10 w-10 text-accent")} />
                   </div>
                   <CardTitle className="text-xl font-semibold text-primary">{t(feature.key)}</CardTitle>
                 </CardHeader>
@@ -124,7 +126,7 @@ export default function HomePage() {
     );
   }
 
-  // This part should ideally not be reached if redirection logic is correct
+  // Fallback for authenticated users if redirection hasn't happened yet (should be brief)
   return (
     <div className="flex h-screen items-center justify-center bg-background">
       <Loader2 className="h-16 w-16 animate-spin text-primary" />
