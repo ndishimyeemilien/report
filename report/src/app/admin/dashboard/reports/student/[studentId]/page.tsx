@@ -10,32 +10,22 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-<<<<<<< HEAD
-import { ArrowLeft, Loader2, AlertTriangle, UserCircle, BookOpen, Percent, CheckCircle, XCircle, CalendarDays, MapPin } from "lucide-react";
-=======
 import { ArrowLeft, Loader2, AlertTriangle, UserCircle, BookOpen, Percent, CheckCircle, XCircle, CalendarDays, MapPin, Award, Users, BarChartHorizontalBig } from "lucide-react";
->>>>>>> 5dbc128 (mjhh)
 import { Separator } from "@/components/ui/separator";
 import { format, parseISO } from "date-fns";
+import Image from "next/image"; // Import next/image
 
 const PASS_MARK = 50;
 
 interface StudentReportData {
   student: Student | null;
   grades: Grade[];
-<<<<<<< HEAD
-  totalMarks: number;
+  totalMarksSum: number;
   averageMarks: number | null;
-  overallStatus: 'Pass' | 'Fail' | 'N/A';
-  systemSettings: SystemSettings | null;
-=======
-  totalMarksSum: number; // Sum of totalMarks
-  averageMarks: number | null; // Average of totalMarks
   overallStatus: 'Pass' | 'Fail' | 'N/A';
   systemSettings: SystemSettings | null;
   numberOfStudentsInClass?: number;
   rank?: string;
->>>>>>> 5dbc128 (mjhh)
 }
 
 export default function StudentReportPage() {
@@ -82,21 +72,12 @@ export default function StudentReportPage() {
           updatedAt: (d.data().updatedAt as Timestamp)?.toDate(),
         } as Grade));
 
-<<<<<<< HEAD
-        let totalMarks = 0;
-        gradesData.forEach(grade => {
-          totalMarks += grade.marks;
-        });
-        
-        const averageMarks = gradesData.length > 0 ? totalMarks / gradesData.length : null;
-=======
         let totalMarksSum = 0;
         gradesData.forEach(grade => {
-          totalMarksSum += grade.totalMarks ?? 0; // Use totalMarks
+          totalMarksSum += grade.totalMarks ?? 0; 
         });
         
         const averageMarks = gradesData.length > 0 ? totalMarksSum / gradesData.length : null;
->>>>>>> 5dbc128 (mjhh)
         let overallStatus: 'Pass' | 'Fail' | 'N/A' = 'N/A';
         if (averageMarks !== null) {
           overallStatus = averageMarks >= PASS_MARK ? 'Pass' : 'Fail';
@@ -106,15 +87,6 @@ export default function StudentReportPage() {
         const settingsSnap = await getDoc(settingsRef);
         const systemSettingsData = settingsSnap.exists() ? settingsSnap.data() as SystemSettings : null;
         
-<<<<<<< HEAD
-        setReportData({
-          student: studentData,
-          grades: gradesData,
-          totalMarks,
-          averageMarks,
-          overallStatus,
-          systemSettings: systemSettingsData,
-=======
         let numberOfStudentsInClass: number | undefined = undefined;
         let rank: string | undefined = undefined;
 
@@ -162,7 +134,6 @@ export default function StudentReportPage() {
           systemSettings: systemSettingsData,
           numberOfStudentsInClass,
           rank,
->>>>>>> 5dbc128 (mjhh)
         });
 
       } catch (err: any) {
@@ -195,11 +166,7 @@ export default function StudentReportPage() {
         </CardHeader>
         <CardContent>
           <p className="text-destructive-foreground">{error}</p>
-<<<<<<< HEAD
-          <Button onClick={() => router.back()} variant="outline" className="mt-4">
-=======
           <Button onClick={() => router.back()} variant="outline" className="mt-4 print:hidden">
->>>>>>> 5dbc128 (mjhh)
             <ArrowLeft className="mr-2 h-4 w-4" /> Go Back
           </Button>
         </CardContent>
@@ -216,11 +183,7 @@ export default function StudentReportPage() {
           <CardDescription>The requested student report could not be found or generated.</CardDescription>
         </CardHeader>
         <CardContent>
-<<<<<<< HEAD
-          <Button onClick={() => router.back()} variant="outline">
-=======
           <Button onClick={() => router.back()} variant="outline" className="print:hidden">
->>>>>>> 5dbc128 (mjhh)
             <ArrowLeft className="mr-2 h-4 w-4" /> Go Back to Reports
           </Button>
         </CardContent>
@@ -228,18 +191,14 @@ export default function StudentReportPage() {
     );
   }
 
-<<<<<<< HEAD
-  const { student, grades, totalMarks, averageMarks, overallStatus, systemSettings } = reportData;
-=======
   const { student, grades, totalMarksSum, averageMarks, overallStatus, systemSettings, numberOfStudentsInClass, rank } = reportData;
->>>>>>> 5dbc128 (mjhh)
 
   const formatUserDate = (dateString: string | undefined) => {
     if (!dateString) return "N/A";
     try {
       return format(parseISO(dateString), "dd/MM/yyyy");
     } catch (e) {
-      return dateString; // Return original if parsing fails
+      return dateString; 
     }
   };
   
@@ -256,17 +215,21 @@ export default function StudentReportPage() {
 
       <Card className="shadow-lg print:shadow-none print:border-none">
         <CardHeader className="border-b pb-4 print:border-none">
-          <div className="text-center mb-4">
+          <div className="flex flex-col items-center mb-4">
+            <div className="mb-2">
+              <Image
+                src="https://placehold.co/200x60.png" // Adjusted placeholder size
+                alt="School Logo"
+                width={200}
+                height={60}
+                className="object-contain"
+                data-ai-hint="school emblem" 
+              />
+            </div>
             <p className="text-sm font-medium text-muted-foreground">REPUBLIC OF RWANDA</p>
             <p className="text-sm font-medium text-muted-foreground">MINISTRY OF EDUCATION</p>
-<<<<<<< HEAD
-            <h1 className="text-xl font-bold text-primary mt-2">COLLEGE DE BETHEL / APARU</h1>
-=======
             <h1 className="text-xl font-bold text-primary mt-2">{systemSettings?.schoolName || "COLLEGE DE BETHEL / APARU"}</h1>
->>>>>>> 5dbc128 (mjhh)
             <p className="text-xs text-muted-foreground">P.O.BOX: 70 RUHANGO | Tel: 0788836651 / 0784522178</p>
-            {/* Placeholder for school logo */}
-            {/* <img src="/placeholder-logo.png" alt="School Logo" className="h-16 w-auto mx-auto my-2" data-ai-hint="school emblem" /> */}
           </div>
           
           <Separator className="my-3"/>
@@ -275,28 +238,13 @@ export default function StudentReportPage() {
             <h2 className="text-2xl font-bold text-center text-primary flex-grow">REPORT CARD</h2>
             <div className="text-right text-sm">
                 <p>School Year: {systemSettings?.defaultAcademicYear || "YYYY-YYYY"}</p>
-<<<<<<< HEAD
-                <p>Term: {systemSettings?.defaultTerm || "N"}</p>
-=======
                 <p>Term: {grades.length > 0 ? grades[0].term : (systemSettings?.defaultTerm || "N/A")}</p>
->>>>>>> 5dbc128 (mjhh)
             </div>
           </div>
         </CardHeader>
         <CardContent className="pt-6 space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2 p-4 border rounded-lg bg-muted/30 text-sm">
             <div className="flex">
-<<<<<<< HEAD
-              <p className="font-medium text-muted-foreground w-28">Student Name:</p>
-              <p className="font-semibold text-foreground">{student.fullName}</p>
-            </div>
-             <div className="flex">
-              <p className="font-medium text-muted-foreground w-28">Class:</p>
-              <p className="font-semibold text-foreground">{student.className || "N/A"}</p>
-            </div>
-            <div className="flex">
-              <p className="font-medium text-muted-foreground w-28">Date of Birth:</p>
-=======
               <p className="font-medium text-muted-foreground w-32">Student Name:</p>
               <p className="font-semibold text-foreground">{student.fullName}</p>
             </div>
@@ -306,35 +254,19 @@ export default function StudentReportPage() {
             </div>
             <div className="flex">
               <p className="font-medium text-muted-foreground w-32">Date of Birth:</p>
->>>>>>> 5dbc128 (mjhh)
               <p className="text-foreground flex items-center">
                 <CalendarDays className="mr-1.5 h-4 w-4 text-muted-foreground" /> 
                 {formatUserDate(student.dateOfBirth) || "N/A"}
               </p>
             </div>
             <div className="flex">
-<<<<<<< HEAD
-              <p className="font-medium text-muted-foreground w-28">Place of Birth:</p>
-=======
               <p className="font-medium text-muted-foreground w-32">Place of Birth:</p>
->>>>>>> 5dbc128 (mjhh)
               <p className="text-foreground flex items-center">
                  <MapPin className="mr-1.5 h-4 w-4 text-muted-foreground" /> 
                  {student.placeOfBirth || "N/A"}
               </p>
             </div>
             <div className="flex">
-<<<<<<< HEAD
-              <p className="font-medium text-muted-foreground w-28">ID No.:</p>
-              <p className="text-foreground">{student.studentSystemId || "N/A"}</p>
-            </div>
-            <div className="flex">
-              <p className="font-medium text-muted-foreground w-28">N. Students:</p>
-              <p className="text-foreground">-- (Placeholder)</p>
-            </div>
-             <div className="flex">
-              <p className="font-medium text-muted-foreground w-28">Conduct:</p>
-=======
               <p className="font-medium text-muted-foreground w-32">ID No.:</p>
               <p className="text-foreground">{student.studentSystemId || "N/A"}</p>
             </div>
@@ -354,7 +286,6 @@ export default function StudentReportPage() {
             </div>
              <div className="flex">
               <p className="font-medium text-muted-foreground w-32">Conduct:</p>
->>>>>>> 5dbc128 (mjhh)
               <p className="text-foreground">-- (Placeholder)</p>
             </div>
           </div>
@@ -369,14 +300,10 @@ export default function StudentReportPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead className="min-w-[200px]">Subject Name</TableHead>
-<<<<<<< HEAD
-                    <TableHead className="text-center">Marks Obtained (Out of 100)</TableHead>
-=======
                     <TableHead className="text-center">CA1</TableHead>
                     <TableHead className="text-center">CA2</TableHead>
                     <TableHead className="text-center">Exam</TableHead>
                     <TableHead className="text-center font-semibold">Total</TableHead>
->>>>>>> 5dbc128 (mjhh)
                     <TableHead className="text-center">Status</TableHead>
                     <TableHead>Remarks</TableHead>
                   </TableRow>
@@ -385,14 +312,10 @@ export default function StudentReportPage() {
                   {grades.map((grade) => (
                     <TableRow key={grade.id}>
                       <TableCell className="font-medium">{grade.courseName}</TableCell>
-<<<<<<< HEAD
-                      <TableCell className="text-center font-semibold">{grade.marks}</TableCell>
-=======
                       <TableCell className="text-center">{grade.ca1 ?? '-'}</TableCell>
                       <TableCell className="text-center">{grade.ca2 ?? '-'}</TableCell>
                       <TableCell className="text-center">{grade.exam ?? '-'}</TableCell>
                       <TableCell className="text-center font-semibold">{grade.totalMarks ?? '-'}</TableCell>
->>>>>>> 5dbc128 (mjhh)
                       <TableCell className="text-center">
                         <Badge variant={grade.status === 'Pass' ? 'default' : 'destructive'}
                                className={grade.status === 'Pass' ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'}>
@@ -413,17 +336,10 @@ export default function StudentReportPage() {
           <CardFooter className="border-t pt-6 mt-6 flex-col items-start space-y-4 sm:flex-row sm:justify-between sm:items-center sm:space-y-0 print:border-none">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full">
               <div className="flex items-center space-x-2 p-3 border rounded-md bg-card">
-<<<<<<< HEAD
-                 <Percent className="h-7 w-7 text-primary" />
-                <div>
-                  <p className="text-xs font-medium text-muted-foreground">Total Marks Obtained</p>
-                  <p className="text-lg font-bold">{totalMarks} / {grades.length * 100}</p>
-=======
                  <BarChartHorizontalBig className="h-7 w-7 text-primary" /> 
                 <div>
                   <p className="text-xs font-medium text-muted-foreground">Total Marks Obtained</p>
                   <p className="text-lg font-bold">{totalMarksSum} / {grades.length * 100}</p> 
->>>>>>> 5dbc128 (mjhh)
                 </div>
               </div>
               <div className="flex items-center space-x-2 p-3 border rounded-md bg-card">
@@ -477,9 +393,4 @@ export default function StudentReportPage() {
         </CardContent>
         <CardFooter className="text-xs text-muted-foreground print:hidden">
             Report Generated On: {new Date().toLocaleDateString()}
-        </CardFooter>
-      </Card>
-
-    </div>
-  );
-}
+        </Card
