@@ -3,17 +3,18 @@
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
-import { Loader2, LogIn, Info, FileText, Users, CheckCircle } from "lucide-react";
+import { Loader2, LogIn, Info, FileText, Users, CheckCircle, ShieldCheck, MessageSquare, BarChart2, Send, Camera, Briefcase } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import Logo from "@/components/shared/Logo";
 import { useTranslation } from "react-i18next";
 import LanguageSwitcher from "@/components/shared/LanguageSwitcher";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function HomePage() {
   const { currentUser, userProfile, loading } = useAuth();
   const router = useRouter();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   useEffect(() => {
     if (!loading) {
@@ -30,6 +31,17 @@ export default function HomePage() {
       }
     }
   }, [currentUser, userProfile, loading, router]);
+
+  const keyFeatures = [
+    { key: 'featureGradeManagement', icon: CheckCircle },
+    { key: 'featureReportCards', icon: FileText },
+    { key: 'featureSmsEmail', icon: Send },
+    { key: 'featureAttendanceBehavior', icon: ShieldCheck },
+    { key: 'featureTeacherStudentReports', icon: BarChart2 },
+    { key: 'featureAssignments', icon: Briefcase },
+    { key: 'featurePhotosDocuments', icon: Camera },
+    { key: 'featureCommunication', icon: MessageSquare },
+  ];
 
   if (loading) {
     return (
@@ -57,34 +69,39 @@ export default function HomePage() {
           </div>
         </header>
 
-        <main className="flex flex-1 flex-col items-center justify-center p-6 text-center mt-16 mb-8">
+        <main className="flex flex-1 flex-col items-center p-6 text-center mt-10 mb-8 container mx-auto">
           <FileText className="h-20 w-20 text-primary mb-6" data-ai-hint="document report"/>
           <h1 className="text-4xl md:text-5xl font-bold mb-4 text-primary">
             {t('homePageTitle', 'Report-Manager Lite')}
           </h1>
-          <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mb-8">
-            {t('homePagePurpose', 'Efficiently manage student grades, generate reports, and streamline school administration.')}
-          </p>
+          
+          <Card className="w-full max-w-3xl my-8 text-left shadow-xl">
+            <CardHeader>
+              <CardTitle className="text-2xl text-accent">{t('platformGoalTitle', 'Platform Goal')}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-lg text-foreground leading-relaxed">
+                {i18n.language === 'rw' ? t('platformGoalRW') : (i18n.language === 'fr' ? t('platformGoalFR') : t('platformGoalEN'))}
+              </p>
+            </CardContent>
+          </Card>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12 max-w-4xl w-full">
-            <div className="bg-card p-6 rounded-lg shadow-md">
-              <Users className="h-10 w-10 text-accent mx-auto mb-3" data-ai-hint="users group" />
-              <h3 className="text-xl font-semibold mb-2">{t('homePageFeature1Title', 'User Roles')}</h3>
-              <p className="text-sm text-muted-foreground">{t('homePageFeature1Desc', 'Dedicated dashboards for Admins, Teachers, and Secretaries.')}</p>
-            </div>
-            <div className="bg-card p-6 rounded-lg shadow-md">
-              <CheckCircle className="h-10 w-10 text-accent mx-auto mb-3" data-ai-hint="checkmark success" />
-              <h3 className="text-xl font-semibold mb-2">{t('homePageFeature2Title', 'Grade Management')}</h3>
-              <p className="text-sm text-muted-foreground">{t('homePageFeature2Desc', 'Easy grade entry, automated calculations, and detailed report cards.')}</p>
-            </div>
-            <div className="bg-card p-6 rounded-lg shadow-md">
-              <FileText className="h-10 w-10 text-accent mx-auto mb-3" data-ai-hint="document list" />
-              <h3 className="text-xl font-semibold mb-2">{t('homePageFeature3Title', 'Comprehensive Reporting')}</h3>
-              <p className="text-sm text-muted-foreground">{t('homePageFeature3Desc', 'Generate student, class, and subject performance reports.')}</p>
-            </div>
+          <h2 className="text-3xl font-semibold mt-10 mb-6 text-primary">{t('keyFeaturesTitle', 'Key Features')}</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12 max-w-5xl w-full">
+            {keyFeatures.map((feature) => (
+              <Card key={feature.key} className="bg-card p-6 rounded-lg shadow-md text-left hover:shadow-lg transition-shadow">
+                <CardHeader className="p-0 mb-3">
+                  <feature.icon className="h-10 w-10 text-accent mx-auto md:mx-0 mb-2" />
+                  <CardTitle className="text-xl font-semibold text-primary">{t(feature.key)}</CardTitle>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <p className="text-sm text-muted-foreground">{t(`${feature.key}Desc`)}</p>
+                </CardContent>
+              </Card>
+            ))}
           </div>
 
-          <div className="flex gap-4">
+          <div className="flex gap-4 mt-8">
             <Button asChild size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground">
               <Link href="/login">
                 <LogIn className="mr-2 h-5 w-5" /> {t('getStartedButton', 'Get Started / Login')}
@@ -98,7 +115,7 @@ export default function HomePage() {
           </div>
         </main>
 
-        <footer className="w-full p-4 text-center text-sm text-muted-foreground">
+        <footer className="w-full p-4 text-center text-sm text-muted-foreground mt-auto">
           &copy; {new Date().getFullYear()} Report-Manager Lite. {t('allRightsReserved', 'All rights reserved.')}
         </footer>
       </div>
