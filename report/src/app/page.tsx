@@ -25,9 +25,11 @@ export default function HomePage() {
         } else if (userProfile.role === 'Secretary') {
           router.replace("/secretary/dashboard");
         } else {
+          // Fallback or unhandled role
           router.replace("/login"); 
         }
       }
+      // If not loading and not authenticated, the public homepage content will be rendered below.
     }
   }, [currentUser, userProfile, loading, router]);
 
@@ -40,10 +42,11 @@ export default function HomePage() {
     );
   }
 
+  // Only render public homepage if not loading and not authenticated
   if (!currentUser) {
     return (
       <div className="flex min-h-screen flex-col items-center bg-gradient-to-br from-secondary to-background text-foreground">
-        <header className="w-full p-4 shadow-md bg-card">
+        <header className="w-full p-4 shadow-md bg-card sticky top-0 z-50">
           <div className="container mx-auto flex justify-between items-center">
             <Logo />
             <div className="flex items-center gap-2">
@@ -57,8 +60,8 @@ export default function HomePage() {
           </div>
         </header>
 
-        <main className="flex flex-1 flex-col items-center justify-center p-6 text-center">
-          <FileText className="h-20 w-20 text-primary mb-6" />
+        <main className="flex flex-1 flex-col items-center justify-center p-6 text-center mt-16 mb-8"> {/* Added margin top/bottom */}
+          <FileText className="h-20 w-20 text-primary mb-6" data-ai-hint="document report"/>
           <h1 className="text-4xl md:text-5xl font-bold mb-4 text-primary">
             {t('homePageTitle', 'Report-Manager Lite')}
           </h1>
@@ -68,17 +71,17 @@ export default function HomePage() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12 max-w-4xl w-full">
             <div className="bg-card p-6 rounded-lg shadow-md">
-              <Users className="h-10 w-10 text-accent mx-auto mb-3" />
+              <Users className="h-10 w-10 text-accent mx-auto mb-3" data-ai-hint="users group" />
               <h3 className="text-xl font-semibold mb-2">{t('homePageFeature1Title', 'User Roles')}</h3>
               <p className="text-sm text-muted-foreground">{t('homePageFeature1Desc', 'Dedicated dashboards for Admins, Teachers, and Secretaries.')}</p>
             </div>
             <div className="bg-card p-6 rounded-lg shadow-md">
-              <CheckCircle className="h-10 w-10 text-accent mx-auto mb-3" />
+              <CheckCircle className="h-10 w-10 text-accent mx-auto mb-3" data-ai-hint="checkmark success" />
               <h3 className="text-xl font-semibold mb-2">{t('homePageFeature2Title', 'Grade Management')}</h3>
               <p className="text-sm text-muted-foreground">{t('homePageFeature2Desc', 'Easy grade entry, automated calculations, and detailed report cards.')}</p>
             </div>
             <div className="bg-card p-6 rounded-lg shadow-md">
-              <FileText className="h-10 w-10 text-accent mx-auto mb-3" />
+              <FileText className="h-10 w-10 text-accent mx-auto mb-3" data-ai-hint="document list" />
               <h3 className="text-xl font-semibold mb-2">{t('homePageFeature3Title', 'Comprehensive Reporting')}</h3>
               <p className="text-sm text-muted-foreground">{t('homePageFeature3Desc', 'Generate student, class, and subject performance reports.')}</p>
             </div>
@@ -105,6 +108,8 @@ export default function HomePage() {
     );
   }
 
+  // If loading is false, and currentUser is true, redirect is handled by useEffect.
+  // This return is a fallback for the brief moment before redirection or if something unexpected happens.
   return (
     <div className="flex h-screen items-center justify-center bg-background">
       <Loader2 className="h-16 w-16 animate-spin text-primary" />
