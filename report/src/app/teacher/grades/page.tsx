@@ -4,10 +4,10 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { GradeForm } from "@/components/grades/GradeForm";
-import type { Grade, Course, Student, Class, ClassCourseAssignment } from "@/types"; 
+import type { Grade, Course, Student, Class, ClassCourseAssignment, SystemSettings } from "@/types"; 
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
-import { collection, deleteDoc, doc, getDocs, query, orderBy, Timestamp, where, documentId, addDoc, serverTimestamp, updateDoc, type FieldValue } from "firebase/firestore";
+import { collection, deleteDoc, doc, getDocs, query, orderBy, Timestamp, where, documentId, addDoc, serverTimestamp, updateDoc, type FieldValue, getDoc } from "firebase/firestore";
 import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { PlusCircle, Edit3, Trash2, ClipboardList, Loader2, AlertTriangle, User, Info, Filter, UploadCloud, Search } from "lucide-react";
 import { Input } from "@/components/ui/input"; 
@@ -56,7 +56,9 @@ const PASS_MARK = 50;
 
 interface GradeExcelRow {
   studentSystemId: string; 
-  marks: string; 
+  ca1?: string; 
+  ca2?: string;
+  exam?: string;
   remarks?: string;
 }
 
@@ -79,6 +81,7 @@ export default function TeacherGradesPage() {
   const [editingGrade, setEditingGrade] = useState<Grade | null>(null);
   const [isImportGradesDialogOpen, setIsImportGradesDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState(""); 
+  const [defaultTerm, setDefaultTerm] = useState<string>("Term 1");
   const { toast } = useToast();
 
   useEffect(() => {
@@ -92,20 +95,29 @@ export default function TeacherGradesPage() {
         const classesQuery = query(collection(db, "classes"), orderBy("name"));
         const teacherSubjectsQuery = query(collection(db, "courses"), where("teacherId", "==", userProfile.uid), orderBy("name"));
         const classAssignmentsQuery = query(collection(db, "classAssignments")); 
+        const settingsRef = doc(db, "systemSettings", "generalConfig");
 
-        const [classesSnap, teacherSubjectsSnap, classAssignmentsSnap] = await Promise.all([
+
+        const [classesSnap, teacherSubjectsSnap, classAssignmentsSnap, settingsSnap] = await Promise.all([
           getDocs(classesQuery),
           getDocs(teacherSubjectsQuery),
           getDocs(classAssignmentsQuery),
+          getDoc(settingsRef),
         ]);
 
         setAllClasses(classesSnap.docs.map(d => ({ id: d.id, ...d.data() } as Class)));
         setTeacherAssignedSubjects(teacherSubjectsSnap.docs.map(d => ({ id: d.id, ...d.data() } as Course)));
         setAllClassAssignments(classAssignmentsSnap.docs.map(d => ({ id: d.id, ...d.data() } as ClassCourseAssignment)));
+        if (settingsSnap.exists()) {
+          const settings = settingsSnap.data() as SystemSettings;
+          if (settings.defaultTerm) {
+            setDefaultTerm(settings.defaultTerm);
+          }
+        }
 
       } catch (err) {
         console.error("Error fetching initial data for teacher grades page: ", err);
-        toast({ title: "Error", description: "Could not load necessary data for page setup.", variant: "destructive" });
+        toast({ title: "Error", description: "Could not load necessary page data.", variant: "destructive" });
       } finally {
         setIsLoadingInitialData(false);
       }
@@ -250,10 +262,20 @@ export default function TeacherGradesPage() {
         errors.push("A grade record was skipped due to missing studentSystemId.");
         continue;
       }
-      const marks = parseFloat(String(row.marks ?? '')); 
-      if (isNaN(marks) || marks < 0 || marks > 100) {
+      
+      const ca1 = row.ca1 !== undefined && row.ca1 !== null && String(row.ca1).trim() !== "" ? parseFloat(String(row.ca1)) : null;
+      const ca2 = row.ca2 !== undefined && row.ca2 !== null && String(row.ca2).trim() !== "" ? parseFloat(String(row.ca2)) : null;
+      const exam = row.exam !== undefined && row.exam !== null && String(row.exam).trim() !== "" ? parseFloat(String(row.exam)) : null;
+
+      const totalMarks = (ca1 ?? 0) + (ca2 ?? 0) + (exam ?? 0);
+      
+      if (
+        (ca1 !== null && (isNaN(ca1) || ca1 < 0 || ca1 > 100)) ||
+        (ca2 !== null && (isNaN(ca2) || ca2 < 0 || ca2 > 100)) ||
+        (exam !== null && (isNaN(exam) || exam < 0 || exam > 100))
+      ) {
         failCount++;
-        errors.push(`Invalid marks for student ID ${studentSystemIdTrimmed}: '${row.marks}'. Skipped.`);
+        errors.push(`Invalid marks for student ID ${studentSystemIdTrimmed}. Marks must be between 0 and 100. Skipped.`);
         continue;
       }
 
@@ -264,16 +286,21 @@ export default function TeacherGradesPage() {
         continue;
       }
 
-      const status: 'Pass' | 'Fail' = marks >= PASS_MARK ? 'Pass' : 'Fail';
+      const status: 'Pass' | 'Fail' = totalMarks >= PASS_MARK ? 'Pass' : 'Fail';
+      const termToUse = defaultTerm; // Use fetched default term
+
       const gradePayload: Partial<Omit<Grade, 'id'>> & {updatedAt: FieldValue, createdAt?: FieldValue} = {
         studentId: student.id,
         studentName: student.fullName,
         courseId: currentSubjectForForm.id,
         courseName: `${currentSubjectForForm.name} (${currentSubjectForForm.code})`,
-        marks: marks,
+        ca1,
+        ca2,
+        exam,
+        totalMarks,
         status,
         remarks: row.remarks || "",
-        term: "Term 1", // Consider making term selectable or part of Excel
+        term: termToUse,
         enteredByTeacherId: userProfile.uid,
         enteredByTeacherEmail: userProfile.email || undefined,
         updatedAt: serverTimestamp(),
@@ -283,16 +310,16 @@ export default function TeacherGradesPage() {
         const gradeQuery = query(
           collection(db, "grades"),
           where("studentId", "==", student.id),
-          where("courseId", "==", currentSubjectForForm.id)
-          // Consider adding where("term", "==", gradePayload.term) if overwriting specific term grades
+          where("courseId", "==", currentSubjectForForm.id),
+          where("term", "==", termToUse)
         );
         const gradeSnapshot = await getDocs(gradeQuery);
 
         if (!gradeSnapshot.empty) { 
-          const existingGradeDoc = gradeSnapshot.docs[0]; // Assuming one grade per student per course for simplicity here
+          const existingGradeDoc = gradeSnapshot.docs[0]; 
           if (existingGradeDoc.data().enteredByTeacherId !== userProfile.uid && !(userProfile.role === 'Admin' || userProfile.role === 'Teacher')) {
             failCount++;
-            errors.push(`Grade for ${student.fullName} (ID: ${studentSystemIdTrimmed}) was entered by another user and cannot be overwritten. Skipped.`);
+            errors.push(`Grade for ${student.fullName} (ID: ${studentSystemIdTrimmed}) in ${termToUse} was entered by another user and cannot be overwritten. Skipped.`);
             continue;
           }
           await updateDoc(doc(db, "grades", existingGradeDoc.id), gradePayload);
@@ -312,13 +339,14 @@ export default function TeacherGradesPage() {
 
     fetchClassAndGradeData(); 
     
-    let message = `${successCount} grade(s) processed successfully.`;
+    let message = `${successCount} grade(s) processed successfully for term ${defaultTerm}.`;
     if (failCount > 0) {
       message += ` ${failCount} record(s) failed or skipped.`;
       if (errors.length > 0) {
         message += ` Details: ${errors.slice(0, 3).join("; ")}${errors.length > 3 ? '...' : ''}`;
       }
     }
+    toast({ title: 'Import Complete', description: message, duration: failCount > 0 ? 10000 : 5000 });
     return { success: successCount > 0 || (successCount === 0 && failCount === 0), message };
   };
 
@@ -399,7 +427,7 @@ export default function TeacherGradesPage() {
                   <DialogHeader>
                     <DialogTitle className="text-xl">{editingGrade ? "Edit Grade" : "Add New Grade"}</DialogTitle>
                     <DialogDescription>
-                      {editingGrade ? "Update student's grade." : `Enter student's grade for ${currentSubjectForForm?.name || 'selected subject'} in class ${allClasses.find(c=>c.id===selectedClassId)?.name || ''}.`}
+                      {editingGrade ? "Update student's grade." : `Enter student's grade for ${currentSubjectForForm?.name || 'selected subject'} in class ${allClasses.find(c=>c.id===selectedClassId)?.name || ''} for term ${defaultTerm}.`}
                     </DialogDescription>
                   </DialogHeader>
                   {currentSubjectForForm && selectedClassId && ( 
@@ -423,10 +451,10 @@ export default function TeacherGradesPage() {
             isOpen={isImportGradesDialogOpen}
             onClose={() => setIsImportGradesDialogOpen(false)}
             onImport={handleGradeImport}
-            templateHeaders={["studentSystemId", "marks", "remarks"]}
+            templateHeaders={["studentSystemId", "ca1", "ca2", "exam", "remarks"]}
             templateFileName={`grades_template_${currentSubjectForForm?.code || 'subject'}_${allClasses.find(c=>c.id===selectedClassId)?.name.replace(/\s+/g, '_') || 'class'}.xlsx`}
             dialogTitle={`Import Grades for ${currentSubjectForForm?.name || 'Selected Subject'} in ${allClasses.find(c=>c.id===selectedClassId)?.name || 'Selected Class'}`}
-            dialogDescription="Upload Excel. Required headers: studentSystemId, marks. Optional: remarks. Student System IDs must match students enrolled in the selected class."
+            dialogDescription={`Upload Excel for Term: ${defaultTerm}. Required: studentSystemId. Optional: ca1, ca2, exam, remarks. Marks are 0-100. Student System IDs must match enrolled students.`}
         />
 
         {isGradesLoading && selectedClassId && selectedSubjectId && (
@@ -483,7 +511,7 @@ export default function TeacherGradesPage() {
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
                     <CardTitle>Grades for: {currentSubjectForForm?.name} ({currentSubjectForForm?.code}) - Class: {allClasses.find(c => c.id === selectedClassId)?.name}</CardTitle>
-                    <CardDescription>A list of student grades for this subject in the selected class. You can add, edit, or delete grades you entered.</CardDescription>
+                    <CardDescription>Term: {defaultTerm}. A list of student grades for this subject in the selected class. You can add, edit, or delete grades you entered.</CardDescription>
                 </div>
                 <div className="relative w-full sm:w-auto">
                     <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -509,9 +537,12 @@ export default function TeacherGradesPage() {
                     <Table>
                     <TableHeader>
                         <TableRow>
-                        <TableHead className="w-[200px]">Student Name</TableHead>
+                        <TableHead className="w-[180px]">Student Name</TableHead>
                         <TableHead>Student ID</TableHead>
-                        <TableHead className="text-center">Marks</TableHead>
+                        <TableHead className="text-center">CA1</TableHead>
+                        <TableHead className="text-center">CA2</TableHead>
+                        <TableHead className="text-center">Exam</TableHead>
+                        <TableHead className="text-center">Total</TableHead>
                         <TableHead className="text-center">Status</TableHead>
                         <TableHead>Remarks</TableHead>
                         <TableHead className="text-center">Entered By</TableHead>
@@ -526,14 +557,17 @@ export default function TeacherGradesPage() {
                             <TableRow key={grade.id}>
                                 <TableCell className="font-medium">{grade.studentName}</TableCell>
                                 <TableCell>{studentDetails?.studentSystemId || 'N/A'}</TableCell>
-                                <TableCell className="text-center">{grade.marks}</TableCell>
+                                <TableCell className="text-center">{grade.ca1 ?? '-'}</TableCell>
+                                <TableCell className="text-center">{grade.ca2 ?? '-'}</TableCell>
+                                <TableCell className="text-center">{grade.exam ?? '-'}</TableCell>
+                                <TableCell className="text-center font-semibold">{grade.totalMarks ?? '-'}</TableCell>
                                 <TableCell className="text-center">
                                 <Badge variant={grade.status === 'Pass' ? 'default' : 'destructive'} 
                                         className={grade.status === 'Pass' ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'}>
                                     {grade.status}
                                 </Badge>
                                 </TableCell>
-                                <TableCell className="max-w-[200px] truncate" title={grade.remarks || undefined}>{grade.remarks || "-"}</TableCell>
+                                <TableCell className="max-w-[150px] truncate" title={grade.remarks || undefined}>{grade.remarks || "-"}</TableCell>
                                 <TableCell className="text-center">
                                 {grade.enteredByTeacherEmail ? (
                                     <Tooltip>
@@ -570,7 +604,7 @@ export default function TeacherGradesPage() {
                                             <AlertDialogHeader>
                                             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                                             <AlertDialogDescription>
-                                                This action will permanently delete the grade for {grade.studentName} in {grade.courseName}.
+                                                This action will permanently delete the grade for {grade.studentName} in {grade.courseName} for term {grade.term}.
                                             </AlertDialogDescription>
                                             </AlertDialogHeader>
                                             <AlertDialogFooter>
@@ -601,3 +635,5 @@ export default function TeacherGradesPage() {
   );
 }
 
+
+    
