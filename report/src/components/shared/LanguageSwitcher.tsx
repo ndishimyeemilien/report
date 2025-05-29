@@ -19,17 +19,17 @@ export default function LanguageSwitcher() {
 
   useEffect(() => {
     setIsMounted(true);
-    // console.log("[LanguageSwitcher Header] Mounted. i18n.language:", i18n.language, "i18n.isInitialized:", i18n.isInitialized, "i18n.ready:", ready);
-  }, [i18n.language, i18n.isInitialized, ready]);
+    console.log("[LanguageSwitcher] Mounted. i18n.language:", i18n.language, "i18n.isInitialized:", i18n.isInitialized, "i18n.ready:", ready);
+  }, [i18n, ready]);
   
   const changeLanguage = (lng: string) => {
-    // console.log("[LanguageSwitcher Header] Changing language to:", lng);
+    console.log("[LanguageSwitcher] Changing language to:", lng);
     i18n.changeLanguage(lng);
   };
 
   if (!isMounted || !ready) {
     return (
-      <Button variant="ghost" size="icon" disabled className="opacity-70">
+      <Button variant="ghost" size="icon" disabled className="opacity-70" aria-label={t('loadingLanguage', 'Loading language options')}>
         <Loader2 className="h-5 w-5 animate-spin" data-ai-hint="loading indicator" />
         <span className="sr-only">{t('selectLanguage', 'Select Language')}</span>
       </Button>
@@ -45,23 +45,35 @@ export default function LanguageSwitcher() {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-48">
-        <DropdownMenuItem onClick={() => changeLanguage("en")} className={cn("flex justify-between items-center", i18n.language.startsWith('en') && "bg-accent")}>
+        <DropdownMenuItem 
+          onClick={() => changeLanguage("en")} 
+          className={cn("flex justify-between items-center", i18n.language.startsWith('en') && "bg-accent")}
+          aria-current={i18n.language.startsWith('en') ? "page" : undefined}
+        >
           <span className="flex items-center">
-            <CaseSensitive className="mr-2 h-4 w-4" />
+            <CaseSensitive className="mr-2 h-4 w-4" /> {/* Icon for English */}
             <span>{t('english', 'English')}</span>
           </span>
           <span className="text-xs text-muted-foreground">EN</span>
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => changeLanguage("fr")} className={cn("flex justify-between items-center", i18n.language.startsWith('fr') && "bg-accent")}>
+        <DropdownMenuItem 
+          onClick={() => changeLanguage("fr")} 
+          className={cn("flex justify-between items-center", i18n.language.startsWith('fr') && "bg-accent")}
+          aria-current={i18n.language.startsWith('fr') ? "page" : undefined}
+        >
           <span className="flex items-center">
-            <Globe className="mr-2 h-4 w-4" />
+            <Globe className="mr-2 h-4 w-4" /> {/* Icon for French */}
             <span>{t('french', 'Français')}</span>
           </span>
           <span className="text-xs text-muted-foreground">FR</span>
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => changeLanguage("rw")} className={cn("flex justify-between items-center", i18n.language.startsWith('rw') && "bg-accent")}>
+        <DropdownMenuItem 
+          onClick={() => changeLanguage("rw")} 
+          className={cn("flex justify-between items-center", i18n.language.startsWith('rw') && "bg-accent")}
+          aria-current={i18n.language.startsWith('rw') ? "page" : undefined}
+        >
           <span className="flex items-center">
-            <TextCursorInput className="mr-2 h-4 w-4" />
+            <TextCursorInput className="mr-2 h-4 w-4" /> {/* Icon for Kinyarwanda */}
             <span>{t('kinyarwanda', 'Kinyarwanda')}</span>
           </span>
           <span className="text-xs text-muted-foreground">RW</span>

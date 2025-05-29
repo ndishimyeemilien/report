@@ -18,7 +18,7 @@ import Link from "next/link";
 import Logo from "../shared/Logo";
 import AdminSidebarNav from "./AdminSidebarNav"; 
 import { useState, useEffect } from "react";
-import LanguageSwitcher from "@/components/shared/LanguageSwitcher";
+import LanguageSwitcher from "@/components/shared/LanguageSwitcher"; // Ensure this is imported
 
 const ThemeToggle = () => {
   const [isDarkMode, setIsDarkMode] = useState(false);
@@ -87,7 +87,7 @@ export default function AdminHeader() {
       </div>
       
       <div className="flex w-full items-center justify-end gap-2 md:ml-auto"> 
-        <LanguageSwitcher />
+        <LanguageSwitcher /> {/* Language switcher is placed here */}
         <ThemeToggle />
         {currentUser && userProfile ? (
           <DropdownMenu>
