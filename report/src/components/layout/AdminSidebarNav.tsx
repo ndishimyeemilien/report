@@ -7,28 +7,29 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { LayoutDashboard, BookOpen, ClipboardList, FileText, Settings, Users, UserCog, Users2, Archive, CalendarClock, Group, MessageSquare } from "lucide-react";
 import SidebarLanguageSwitcher from "@/components/shared/SidebarLanguageSwitcher";
+import { useTranslation } from "react-i18next";
 
 export interface NavItem {
   href: string;
-  label: string;
+  labelKey: string; // Changed from label to labelKey
   icon: React.ElementType;
   disabled?: boolean;
 }
 
 // Admin specific navigation
-export const adminNavItems: NavItem[] = [
-  { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/admin/dashboard/courses", label: "Subjects", icon: BookOpen }, 
-  { href: "/admin/dashboard/classes", label: "Classes", icon: Archive },
-  { href: "/admin/dashboard/terms", label: "Academic Terms", icon: CalendarClock },
-  { href: "/admin/dashboard/groups", label: "Teacher Groups", icon: Group }, 
-  { href: "/admin/dashboard/grades", label: "Grades", icon: ClipboardList },
-  { href: "/admin/dashboard/reports", label: "Reports", icon: FileText },
-  { href: "/admin/dashboard/feedback", label: "Feedback", icon: MessageSquare },
-  { href: "/secretary/students", label: "Students", icon: Users }, 
-  { href: "/admin/dashboard/teachers", label: "Teachers", icon: UserCog, disabled: false }, 
-  { href: "/admin/dashboard/users", label: "Manage Users", icon: Users2 },
-  { href: "/admin/settings", label: "Settings", icon: Settings },
+export const adminNavItemsData: NavItem[] = [
+  { href: "/admin/dashboard", labelKey: "navAdminDashboard", icon: LayoutDashboard },
+  { href: "/admin/dashboard/courses", labelKey: "navAdminSubjects", icon: BookOpen }, 
+  { href: "/admin/dashboard/classes", labelKey: "navAdminClasses", icon: Archive },
+  { href: "/admin/dashboard/terms", labelKey: "navAdminTerms", icon: CalendarClock },
+  { href: "/admin/dashboard/groups", labelKey: "navAdminGroups", icon: Group }, 
+  { href: "/admin/dashboard/grades", labelKey: "navAdminGrades", icon: ClipboardList },
+  { href: "/admin/dashboard/reports", labelKey: "navAdminReports", icon: FileText },
+  { href: "/admin/dashboard/feedback", labelKey: "navAdminFeedback", icon: MessageSquare },
+  { href: "/secretary/students", labelKey: "navAdminStudents", icon: Users }, 
+  { href: "/admin/dashboard/teachers", labelKey: "navAdminTeachers", icon: UserCog, disabled: false }, 
+  { href: "/admin/dashboard/users", labelKey: "navAdminUsers", icon: Users2 },
+  { href: "/admin/settings", labelKey: "navAdminSettings", icon: Settings },
 ];
 
 interface AdminSidebarNavProps {
@@ -37,7 +38,9 @@ interface AdminSidebarNavProps {
 
 export default function AdminSidebarNav({ isMobile = false }: AdminSidebarNavProps) {
   const pathname = usePathname();
-  const navItems = adminNavItems;
+  const { t } = useTranslation(); 
+
+  const navItems = adminNavItemsData;
 
   return (
     <nav className={cn("flex flex-col gap-1 px-2 py-4", isMobile ? "" : "md:px-4")}>
@@ -78,7 +81,7 @@ export default function AdminSidebarNav({ isMobile = false }: AdminSidebarNavPro
 
         return (
           <Button
-            key={item.label} 
+            key={item.labelKey} 
             asChild
             variant={buttonVariant}
             className={buttonClassName}
@@ -86,7 +89,7 @@ export default function AdminSidebarNav({ isMobile = false }: AdminSidebarNavPro
           >
             <Link href={item.disabled ? "#" : item.href}>
               <item.icon className="mr-3 h-5 w-5" />
-              {item.label}
+              {t(item.labelKey)}
             </Link>
           </Button>
         );
