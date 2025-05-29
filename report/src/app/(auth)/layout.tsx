@@ -1,6 +1,5 @@
 
 import Logo from "@/components/shared/Logo";
-// Removed LanguageSwitcher import as it's now in Admin Settings
 
 export default function AuthLayout({
   children,
@@ -13,7 +12,6 @@ export default function AuthLayout({
         <Logo className="text-3xl text-primary" />
       </div>
       <div className="w-full max-w-md rounded-lg bg-card p-8 shadow-xl">
-        {/* LanguageSwitcher removed from here */}
         {children}
       </div>
     </div>

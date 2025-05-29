@@ -1,20 +1,20 @@
 
-// console.log("Admin Dashboard: File re-evaluation attempt - v13 - explicit line 13 check"); // Line 2
+"use client";
+// Admin Dashboard: File re-evaluation attempt - v13 - explicit line 13 check
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"; // Line 4
-import { BookOpen, ClipboardList, Users, BarChart3, UsersRound, UserCog, Percent, ListChecks, Loader2, Users2, Archive, CalendarClock, Group, MessageSquare, PersonStanding, VenetianMask } from "lucide-react"; // Line 5
-import Link from "next/link"; // Line 6
-import { collection, getDocs, query, where, Timestamp, orderBy, limit } from "firebase/firestore"; // Line 7
-import { db } from "@/lib/firebase"; // Line 8
-import type { Grade, Student } from "@/types"; // Line 9
-import { ScrollArea } from "@/components/ui/scroll-area"; // Line 10
-import { useEffect, useState } from "react"; // Line 11
-import { Button } from "@/components/ui/button"; // Line 12
-import { cn } from "@/lib/utils"; // THIS IS NOW LINE 13
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"; 
+import { BookOpen, ClipboardList, Users, BarChart3, UsersRound, UserCog, Percent, ListChecks, Loader2, Users2, Archive, CalendarClock, Group, MessageSquare, PersonStanding, VenetianMask } from "lucide-react"; 
+import Link from "next/link"; 
+import { collection, getDocs, query, where, Timestamp, orderBy, limit } from "firebase/firestore"; 
+import { db } from "@/lib/firebase"; 
+import type { Grade, Student } from "@/types"; 
+import { ScrollArea } from "@/components/ui/scroll-area"; 
+import { useEffect, useState } from "react"; 
+import { Button } from "@/components/ui/button"; 
+// import { useTranslation } from 'react-i18next'; // Temporarily commented out to avoid module not found error
+import { cn } from "@/lib/utils"; 
 
-// Line 15 is empty
-
-interface DashboardStats { // Line 16
+interface DashboardStats { 
   totalCourses: number;
   totalClasses: number;
   totalAcademicTerms: number;
@@ -34,8 +34,8 @@ interface DashboardStats { // Line 16
 }
 
 export default function DashboardPage() {
-  // const { t } = useTranslation(); // Intentionally removed due to persistent module error
-  console.log("Admin Dashboard: Rendering with hardcoded title - v13 - line 13 is cn import"); 
+  // const { t } = useTranslation(); // Temporarily commented out
+  console.log("Admin Dashboard: Rendering with hardcoded title - v13 - line 13 is now cn import"); 
   const [statsData, setStatsData] = useState<DashboardStats>({
     totalCourses: 0,
     totalClasses: 0,
@@ -280,6 +280,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-    
-
-    

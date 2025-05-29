@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { AlertTriangle, LockKeyhole, BookCopy, Loader2, School, Languages } from "lucide-react"; // Added Languages
+import { AlertTriangle, LockKeyhole, BookCopy, Loader2, School, Languages } from "lucide-react"; 
 import { ChangePasswordForm } from "@/components/auth/ChangePasswordForm";
 import { useAuth } from "@/context/AuthContext";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -18,8 +18,8 @@ import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import type { SystemSettings } from "@/types";
 import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
-import LanguageSwitcher from "@/components/shared/LanguageSwitcher"; // Import LanguageSwitcher
-import { useTranslation } from "react-i18next"; // Import useTranslation
+import LanguageSwitcher from "@/components/shared/LanguageSwitcher"; 
+import { useTranslation } from "react-i18next"; 
 
 const systemSettingsSchema = z.object({
   schoolName: z.string().max(100, "School name is too long.").optional(),
@@ -30,7 +30,7 @@ const systemSettingsSchema = z.object({
 type SystemSettingsFormValues = z.infer<typeof systemSettingsSchema>;
 
 export default function AdminSettingsPage() {
-  const { t } = useTranslation(); // Initialize useTranslation
+  const { t } = useTranslation(); 
   const { userProfile, currentUser } = useAuth();
   const { toast } = useToast();
   const [isLoadingSettings, setIsLoadingSettings] = useState(true);
@@ -136,7 +136,7 @@ export default function AdminSettingsPage() {
             <ChangePasswordForm />
           </CardContent>
         </Card>
-
+        
         <Card className="lg:col-span-3">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -149,7 +149,6 @@ export default function AdminSettingsPage() {
             <LanguageSwitcher />
           </CardContent>
         </Card>
-
 
         <Card className="lg:col-span-3">
           <CardHeader>

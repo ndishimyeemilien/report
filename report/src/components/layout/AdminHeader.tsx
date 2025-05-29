@@ -17,7 +17,6 @@ import { Menu, LogOut, Settings, Sun, Moon } from "lucide-react";
 import Link from "next/link";
 import Logo from "../shared/Logo";
 import AdminSidebarNav from "./AdminSidebarNav"; 
-// Removed LanguageSwitcher import
 import { useState, useEffect } from "react";
 
 // Simple theme toggle (no persistence for Lite version)
@@ -73,9 +72,9 @@ export default function AdminHeader() {
           </SheetTrigger>
           <SheetContent side="left" className="flex flex-col p-0 pt-4 bg-sidebar text-sidebar-foreground">
             <SheetHeader className="border-b border-sidebar-border px-4 pb-4">
-              <SheetTitle>Menu</SheetTitle> {/* Changed title to be visible */}
+              <SheetTitle>Menu</SheetTitle> 
             </SheetHeader>
-             <div className="px-4 mb-4 mt-2"> {/* Added mt-2 for spacing */}
+             <div className="px-4 mb-4 mt-2"> 
                 <Logo className="text-sidebar-foreground"/>
              </div>
             <AdminSidebarNav isMobile={true} />
@@ -87,9 +86,8 @@ export default function AdminHeader() {
         {/* Placeholder for breadcrumbs or page title if needed */}
       </div>
       
-      <div className="flex w-full items-center justify-end gap-2 md:ml-auto"> {/* Reduced gap */}
+      <div className="flex w-full items-center justify-end gap-2 md:ml-auto"> 
         <ThemeToggle />
-        {/* LanguageSwitcher removed from here */}
         {currentUser && userProfile ? (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

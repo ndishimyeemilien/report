@@ -3,15 +3,8 @@
 
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from "react-i18next";
-import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Languages, CaseSensitive, TextCursorInput, Globe, Loader2 } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Languages, CaseSensitive, TextCursorInput, Globe, Loader2 } from "lucide-react"; // Assuming Globe and TextCursorInput are desired
 import { Label } from "@/components/ui/label";
 
 export default function LanguageSwitcher() {
@@ -21,22 +14,24 @@ export default function LanguageSwitcher() {
 
   useEffect(() => {
     setIsMounted(true);
-    setCurrentLanguage(i18n.language); // Ensure state is synced with i18n on mount/change
+    setCurrentLanguage(i18n.language); 
   }, [i18n.language]);
 
   const changeLanguage = (lng: string) => {
     console.log("LanguageSwitcher: Attempting to change language to:", lng);
     i18n.changeLanguage(lng);
-    setCurrentLanguage(lng); // Update local state immediately
+    setCurrentLanguage(lng); 
   };
 
   if (!isMounted || !ready) {
     return (
       <div className="flex items-center space-x-2">
         <Label htmlFor="language-select-loading" className="text-sm font-medium text-muted-foreground">{t('loadingLanguages', 'Loading languages...')}</Label>
-        <Button variant="outline" size="icon" disabled id="language-select-loading">
-          <Loader2 className="h-5 w-5 animate-spin" />
-        </Button>
+        <Select disabled>
+          <SelectTrigger className="w-full md:w-[200px]" id="language-select-loading">
+            <SelectValue placeholder={<Loader2 className="h-5 w-5 animate-spin" />} />
+          </SelectTrigger>
+        </Select>
       </div>
     );
   }
