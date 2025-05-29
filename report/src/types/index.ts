@@ -1,13 +1,22 @@
 
+<<<<<<< HEAD
+=======
 
+>>>>>>> 5dbc128 (mjhh)
 export interface Course {
   id: string;
   name: string; // This will now be the subject name, e.g., Mathematics
   code: string; // Subject code, e.g., MATH101
+<<<<<<< HEAD
+  description?: string;
+  teacherId?: string; // ID of the user assigned as teacher
+  teacherName?: string; // Denormalized teacher name for display
+=======
   description?: string | null; // Allow null for deletion
   teacherId?: string; // ID of the user assigned as teacher
   teacherName?: string | null; // Denormalized teacher name for display, allow null
   department?: string | null; // Optional: Department the subject belongs to
+>>>>>>> 5dbc128 (mjhh)
   
   category: string; // e.g., "General Education", "TVET"
   combination: string; // e.g., "MCB", "Software Development"
@@ -19,6 +28,14 @@ export interface Course {
 export interface Student {
   id: string; // Firebase document ID
   fullName: string;
+<<<<<<< HEAD
+  studentSystemId?: string; // Optional: School's unique ID for the student
+  email?: string; // Optional
+  classId?: string; // ID of the Class the student is assigned to
+  className?: string; // Denormalized name of the Class
+  dateOfBirth?: string; // New field for date of birth
+  placeOfBirth?: string; // New field for place of birth
+=======
   studentSystemId?: string; 
   email?: string; 
   classId?: string; 
@@ -26,6 +43,7 @@ export interface Student {
   dateOfBirth?: string; 
   placeOfBirth?: string; 
   gender?: 'Male' | 'Female' | 'Other' | ''; // Added gender field
+>>>>>>> 5dbc128 (mjhh)
   createdAt: Date;
   updatedAt: Date;
 }
@@ -41,6 +59,18 @@ export interface Enrollment {
 
 export interface Grade {
   id: string;
+<<<<<<< HEAD
+  studentId: string; // Link to the Student document
+  studentName: string; // Denormalized from Student
+  courseId: string; // This refers to the ID of a Course (subject)
+  courseName: string; // Denormalized from Course (subject)
+  marks: number;
+  status: 'Pass' | 'Fail';
+  remarks?: string;
+  term?: string; // e.g., "Term 1", "Term 2"
+  enteredByTeacherId?: string; // UID of the teacher who entered/last modified
+  enteredByTeacherEmail?: string; // Email of the teacher
+=======
   studentId: string; 
   studentName: string; 
   courseId: string; 
@@ -54,6 +84,7 @@ export interface Grade {
   term?: string; // e.g., "Term 1", "Term 2"
   enteredByTeacherId?: string; 
   enteredByTeacherEmail?: string; 
+>>>>>>> 5dbc128 (mjhh)
   createdAt: Date;
   updatedAt: Date;
 }
@@ -66,19 +97,32 @@ export interface UserProfile {
   role: UserRole;
   createdAt?: Date;
   updatedAt?: Date;
+<<<<<<< HEAD
+  assignedCourseNames?: string[]; // Added to show assigned courses for teachers
+=======
   assignedCourseNames?: string[]; 
   teacherGroupId?: string | null; 
   teacherGroupName?: string | null; 
+>>>>>>> 5dbc128 (mjhh)
 }
 
 export interface Class {
   id: string;
+<<<<<<< HEAD
+  name: string; // e.g., "Grade 10A", "Form 3 Blue"
+  description?: string;
+  academicYear?: string; // e.g., "2023-2024"
+  secretaryId?: string; // UID of the secretary who manages the class
+  secretaryName?: string; // Denormalized name of the secretary
+  assignedCoursesCount?: number; // New: Count of courses assigned to this class
+=======
   name: string; 
   description?: string;
   academicYear?: string; 
   secretaryId?: string; 
   secretaryName?: string; 
   assignedCoursesCount?: number; 
+>>>>>>> 5dbc128 (mjhh)
   createdAt: Date;
   updatedAt: Date;
 }
@@ -94,12 +138,17 @@ export interface ClassCourseAssignment {
 
 export interface SystemSettings {
   id?: string; // Document ID, e.g., "generalConfig"
+<<<<<<< HEAD
+=======
   schoolName?: string; // New: Name of the school
+>>>>>>> 5dbc128 (mjhh)
   defaultAcademicYear?: string;
   defaultTerm?: string;
   updatedAt?: Date;
   updatedBy?: string; // UID of admin who last updated
 }
+<<<<<<< HEAD
+=======
 
 // --- New types for Attendance ---
 export type AttendanceStatus = 'Present' | 'Absent' | 'Late' | 'Excused';
@@ -156,3 +205,4 @@ export interface Feedback {
   status?: 'new' | 'read' | 'archived'; // Optional: for admin tracking
 }
 // --- End of New type for Feedback ---
+>>>>>>> 5dbc128 (mjhh)

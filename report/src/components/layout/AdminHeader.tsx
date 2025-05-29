@@ -10,10 +10,17 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+<<<<<<< HEAD
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { useAuth } from "@/context/AuthContext";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Menu, LogOut, Settings, Sun, Moon } from "lucide-react"; // Removed UserCircle as Avatar is used
+=======
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { useAuth } from "@/context/AuthContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Menu, LogOut, Settings, Sun, Moon } from "lucide-react";
+>>>>>>> 5dbc128 (mjhh)
 import Link from "next/link";
 import Logo from "../shared/Logo";
 import AdminSidebarNav from "./AdminSidebarNav"; 
@@ -24,6 +31,10 @@ const ThemeToggle = () => {
   const [isDarkMode, setIsDarkMode] = useState(false);
 
   useEffect(() => {
+<<<<<<< HEAD
+    // Check for saved theme preference or system preference
+=======
+>>>>>>> 5dbc128 (mjhh)
     const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
     const savedTheme = typeof window !== 'undefined' ? localStorage.getItem('theme') : null;
     if (savedTheme) {
@@ -71,10 +82,14 @@ export default function AdminHeader() {
             </Button>
           </SheetTrigger>
           <SheetContent side="left" className="flex flex-col p-0 pt-4 bg-sidebar text-sidebar-foreground">
+<<<<<<< HEAD
+             <div className="px-4 mb-4">
+=======
             <SheetHeader className="border-b border-sidebar-border px-4 pb-4">
               <SheetTitle>Menu</SheetTitle> 
             </SheetHeader>
              <div className="px-4 mb-4 mt-2"> 
+>>>>>>> 5dbc128 (mjhh)
                 <Logo className="text-sidebar-foreground"/>
              </div>
             <AdminSidebarNav isMobile={true} />
@@ -86,7 +101,11 @@ export default function AdminHeader() {
         {/* Placeholder for breadcrumbs or page title if needed */}
       </div>
       
+<<<<<<< HEAD
+      <div className="flex w-full items-center justify-end gap-4 md:ml-auto">
+=======
       <div className="flex w-full items-center justify-end gap-2 md:ml-auto"> 
+>>>>>>> 5dbc128 (mjhh)
         <ThemeToggle />
         {currentUser && userProfile ? (
           <DropdownMenu>
@@ -113,7 +132,11 @@ export default function AdminHeader() {
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
+<<<<<<< HEAD
+                <Link href="/admin/settings"> {/* Updated Link */}
+=======
                 <Link href="/admin/settings">
+>>>>>>> 5dbc128 (mjhh)
                   <Settings className="mr-2 h-4 w-4" />
                   <span>Settings</span>
                 </Link>

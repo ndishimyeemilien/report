@@ -1,10 +1,17 @@
+<<<<<<< HEAD
+=======
 
+>>>>>>> 5dbc128 (mjhh)
 "use client";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { GradeForm } from "@/components/grades/GradeForm";
+<<<<<<< HEAD
+import type { Grade, Course, Student } from "@/types"; // Added Course and Student
+=======
 import type { Grade, Course, Student } from "@/types"; 
+>>>>>>> 5dbc128 (mjhh)
 import { db } from "@/lib/firebase";
 import { collection, deleteDoc, doc, getDocs, query, orderBy, Timestamp } from "firebase/firestore";
 import { useEffect, useState } from "react";
@@ -42,12 +49,28 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 
+<<<<<<< HEAD
+// Basic CSV export function
+const exportToCSV = (grades: Grade[]) => {
+=======
 // Updated CSV export function
 const exportGradesToCSV = (grades: Grade[], students: Student[]) => {
+>>>>>>> 5dbc128 (mjhh)
   if (grades.length === 0) {
     alert("No grades to export.");
     return;
   }
+<<<<<<< HEAD
+  const headers = ["Student Name","Student System ID", "Course Code", "Course Name", "Marks", "Status", "Remarks", "Entered By", "Date Recorded"];
+  const rows = grades.map(grade => [
+    grade.studentName,
+    // Assuming studentSystemId might be available on grade if denormalized, or needs fetching
+    // For simplicity, not fetching here, add if student data is easily joinable or denormalized on grade
+    "", // Placeholder for studentSystemId
+    grade.courseName.split('(')[1]?.replace(')','').trim() || 'N/A', 
+    grade.courseName.split('(')[0].trim(),
+    grade.marks,
+=======
   // Map student IDs to their system IDs for quick lookup
   const studentSystemIdMap = new Map(students.map(s => [s.id, s.studentSystemId]));
 
@@ -67,6 +90,7 @@ const exportGradesToCSV = (grades: Grade[], students: Student[]) => {
     grade.exam ?? '',
     grade.totalMarks ?? '',
     grade.term || "N/A",
+>>>>>>> 5dbc128 (mjhh)
     grade.status,
     grade.remarks || "",
     grade.enteredByTeacherEmail || "Admin/System",
@@ -75,12 +99,20 @@ const exportGradesToCSV = (grades: Grade[], students: Student[]) => {
 
   let csvContent = "data:text/csv;charset=utf-8," 
     + headers.join(",") + "\n" 
+<<<<<<< HEAD
+    + rows.map(e => e.join(",")).join("\n");
+=======
     + rows.map(e => e.map(field => `"${String(field ?? '').replace(/"/g, '""')}"`).join(",")).join("\n");
+>>>>>>> 5dbc128 (mjhh)
 
   const encodedUri = encodeURI(csvContent);
   const link = document.createElement("a");
   link.setAttribute("href", encodedUri);
+<<<<<<< HEAD
+  link.setAttribute("download", "grades_report.csv");
+=======
   link.setAttribute("download", "all_grades_report.csv");
+>>>>>>> 5dbc128 (mjhh)
   document.body.appendChild(link); 
   link.click();
   document.body.removeChild(link);
@@ -89,8 +121,13 @@ const exportGradesToCSV = (grades: Grade[], students: Student[]) => {
 
 export default function GradesPage() {
   const [grades, setGrades] = useState<Grade[]>([]);
+<<<<<<< HEAD
+  const [allCourses, setAllCourses] = useState<Course[]>([]); // For admin form
+  const [allStudents, setAllStudents] = useState<Student[]>([]); // For admin form
+=======
   const [allCourses, setAllCourses] = useState<Course[]>([]); 
   const [allStudents, setAllStudents] = useState<Student[]>([]); 
+>>>>>>> 5dbc128 (mjhh)
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -152,7 +189,11 @@ export default function GradesPage() {
     try {
       await deleteDoc(doc(db, "grades", gradeId));
       toast({ title: "Grade Deleted", description: `Grade for ${studentName} in ${courseName} deleted.` });
+<<<<<<< HEAD
+      fetchAllData(); // Refetch all data as grades changed
+=======
       fetchAllData(); 
+>>>>>>> 5dbc128 (mjhh)
     } catch (error: any)
     {
       console.error("Error deleting grade: ", error);
@@ -162,7 +203,11 @@ export default function GradesPage() {
   
   const selectedCourseForForm = editingGrade 
                                  ? allCourses.find(c => c.id === editingGrade.courseId) 
+<<<<<<< HEAD
+                                 : (allCourses.length > 0 ? allCourses[0] : undefined); // Default to first course for 'Add New' if courses exist
+=======
                                  : (allCourses.length > 0 ? allCourses[0] : undefined); 
+>>>>>>> 5dbc128 (mjhh)
 
   return (
     <TooltipProvider>
@@ -170,12 +215,17 @@ export default function GradesPage() {
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-3xl font-bold tracking-tight text-foreground">Manage Grades (Admin View)</h1>
         <div className="flex gap-2">
+<<<<<<< HEAD
+          <Button variant="outline" onClick={() => exportToCSV(grades)} disabled={grades.length === 0 || isLoading}>
+            <Download className="mr-2 h-5 w-5" /> Export as CSV
+=======
           <Button 
             variant="outline" 
             onClick={() => exportGradesToCSV(grades, allStudents)} 
             disabled={grades.length === 0 || isLoading}
           >
             <Download className="mr-2 h-5 w-5" /> Export All Grades (CSV)
+>>>>>>> 5dbc128 (mjhh)
           </Button>
           <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
             <DialogTrigger asChild>
@@ -190,11 +240,19 @@ export default function GradesPage() {
                   {editingGrade ? "Update the student's grade details." : "Enter the student's grade information. Admins can assign grades for any student in any course."}
                 </DialogDescription>
               </DialogHeader>
+<<<<<<< HEAD
+               {(allCourses.length > 0 && allStudents.length > 0 && selectedCourseForForm) && ( // Ensure selectedCourseForForm is defined
+                <GradeForm 
+                    initialData={editingGrade} 
+                    course={selectedCourseForForm} // Pass the determined course
+                    students={allStudents} // Admin can select from all students
+=======
                {(allCourses.length > 0 && allStudents.length > 0 && selectedCourseForForm) && ( 
                 <GradeForm 
                     initialData={editingGrade} 
                     course={selectedCourseForForm} 
                     students={allStudents} 
+>>>>>>> 5dbc128 (mjhh)
                     onClose={() => {
                         setIsFormOpen(false);
                         setEditingGrade(null);
@@ -261,11 +319,15 @@ export default function GradesPage() {
                   <TableRow>
                     <TableHead className="w-[180px]">Student Name</TableHead>
                     <TableHead>Course</TableHead>
+<<<<<<< HEAD
+                    <TableHead className="text-center">Marks</TableHead>
+=======
                     <TableHead className="text-center">CA1</TableHead>
                     <TableHead className="text-center">CA2</TableHead>
                     <TableHead className="text-center">Exam</TableHead>
                     <TableHead className="text-center">Total</TableHead>
                     <TableHead className="text-center">Term</TableHead>
+>>>>>>> 5dbc128 (mjhh)
                     <TableHead className="text-center">Status</TableHead>
                     <TableHead>Remarks</TableHead>
                     <TableHead className="text-center w-[120px]">Entered By</TableHead>
@@ -277,11 +339,15 @@ export default function GradesPage() {
                     <TableRow key={grade.id}>
                       <TableCell className="font-medium">{grade.studentName}</TableCell>
                       <TableCell>{grade.courseName}</TableCell>
+<<<<<<< HEAD
+                      <TableCell className="text-center">{grade.marks}</TableCell>
+=======
                       <TableCell className="text-center">{grade.ca1 ?? '-'}</TableCell>
                       <TableCell className="text-center">{grade.ca2 ?? '-'}</TableCell>
                       <TableCell className="text-center">{grade.exam ?? '-'}</TableCell>
                       <TableCell className="text-center font-semibold">{grade.totalMarks ?? '-'}</TableCell>
                       <TableCell className="text-center">{grade.term || "N/A"}</TableCell>
+>>>>>>> 5dbc128 (mjhh)
                       <TableCell className="text-center">
                         <Badge variant={grade.status === 'Pass' ? 'default' : 'destructive'} 
                                className={grade.status === 'Pass' ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'}>
@@ -349,4 +415,7 @@ export default function GradesPage() {
   );
 }
 
+<<<<<<< HEAD
+=======
     
+>>>>>>> 5dbc128 (mjhh)

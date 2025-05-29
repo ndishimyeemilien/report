@@ -1,4 +1,7 @@
+<<<<<<< HEAD
+=======
 
+>>>>>>> 5dbc128 (mjhh)
 import Logo from "@/components/shared/Logo";
 
 export default function AuthLayout({

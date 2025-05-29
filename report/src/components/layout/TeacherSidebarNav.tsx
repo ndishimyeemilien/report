@@ -1,11 +1,18 @@
+<<<<<<< HEAD
+=======
 
+>>>>>>> 5dbc128 (mjhh)
 "use client";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+<<<<<<< HEAD
+import { LayoutDashboard, BookOpen, Edit } from "lucide-react"; 
+=======
 import { LayoutDashboard, BookOpen, Edit, CheckSquare } from "lucide-react"; 
+>>>>>>> 5dbc128 (mjhh)
 
 export interface NavItem {
   href: string;
@@ -19,7 +26,10 @@ export const teacherNavItems: NavItem[] = [
   { href: "/teacher/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/teacher/courses", label: "My Courses", icon: BookOpen }, 
   { href: "/teacher/grades", label: "Enter Grades", icon: Edit },
+<<<<<<< HEAD
+=======
   { href: "/teacher/attendance", label: "Attendance", icon: CheckSquare },
+>>>>>>> 5dbc128 (mjhh)
 ];
 
 interface TeacherSidebarNavProps {
@@ -35,6 +45,11 @@ export default function TeacherSidebarNav({ isMobile = false }: TeacherSidebarNa
       {navItems.map((item) => {
         const isActive =
           pathname === item.href ||
+<<<<<<< HEAD
+          // Check if current path starts with item.href, but exclude dashboard
+          // to prevent it from being active for all its sub-routes if not strictly matching.
+=======
+>>>>>>> 5dbc128 (mjhh)
           (pathname.startsWith(item.href) && item.href !== "/teacher/dashboard");
 
         const buttonVariant = isActive ? "default" : "ghost";
@@ -49,7 +64,11 @@ export default function TeacherSidebarNav({ isMobile = false }: TeacherSidebarNa
         
         return (
           <Button
+<<<<<<< HEAD
+            key={item.href}
+=======
             key={item.label}
+>>>>>>> 5dbc128 (mjhh)
             asChild
             variant={buttonVariant}
             className={buttonClassName}
@@ -64,4 +83,8 @@ export default function TeacherSidebarNav({ isMobile = false }: TeacherSidebarNa
       })}
     </nav>
   );
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> 5dbc128 (mjhh)

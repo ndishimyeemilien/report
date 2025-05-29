@@ -10,13 +10,21 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+<<<<<<< HEAD
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+=======
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+>>>>>>> 5dbc128 (mjhh)
 import { useAuth } from "@/context/AuthContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Menu, LogOut, UserCircle, Settings, Sun, Moon } from "lucide-react";
 import Link from "next/link";
 import Logo from "../shared/Logo";
+<<<<<<< HEAD
+import TeacherSidebarNav from "./TeacherSidebarNav"; // To be created
+=======
 import TeacherSidebarNav from "./TeacherSidebarNav"; 
+>>>>>>> 5dbc128 (mjhh)
 import { useState, useEffect } from "react";
 
 // Simple theme toggle (can be shared or duplicated)
@@ -70,10 +78,14 @@ export default function TeacherHeader() {
             </Button>
           </SheetTrigger>
           <SheetContent side="left" className="flex flex-col p-0 pt-4 bg-sidebar text-sidebar-foreground">
+<<<<<<< HEAD
+             <div className="px-4 mb-4">
+=======
             <SheetHeader className="border-b border-sidebar-border px-4 pb-4">
               <SheetTitle>Menu</SheetTitle> 
             </SheetHeader>
              <div className="px-4 mb-4 mt-2"> 
+>>>>>>> 5dbc128 (mjhh)
                 <Logo className="text-sidebar-foreground"/>
              </div>
             <TeacherSidebarNav isMobile={true} />
@@ -81,7 +93,11 @@ export default function TeacherHeader() {
         </Sheet>
       </div>
       
+<<<<<<< HEAD
+      <div className="flex w-full items-center justify-end gap-4 md:ml-auto">
+=======
       <div className="flex w-full items-center justify-end gap-2 md:ml-auto"> 
+>>>>>>> 5dbc128 (mjhh)
         <ThemeToggle />
         {currentUser && userProfile ? (
           <DropdownMenu>
