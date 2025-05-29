@@ -9,7 +9,7 @@ import Link from "next/link";
 import Logo from "@/components/shared/Logo";
 import { useTranslation } from "react-i18next";
 import LanguageSwitcher from "@/components/shared/LanguageSwitcher";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 
 export default function HomePage() {
   const { currentUser, userProfile, loading } = useAuth();
@@ -33,14 +33,14 @@ export default function HomePage() {
   }, [currentUser, userProfile, loading, router]);
 
   const keyFeatures = [
-    { key: 'featureGradeManagement', icon: CheckCircle },
-    { key: 'featureReportCards', icon: FileText },
-    { key: 'featureSmsEmail', icon: Send },
-    { key: 'featureAttendanceBehavior', icon: ShieldCheck },
-    { key: 'featureTeacherStudentReports', icon: BarChart2 },
-    { key: 'featureAssignments', icon: Briefcase },
-    { key: 'featurePhotosDocuments', icon: Camera },
-    { key: 'featureCommunication', icon: MessageSquare },
+    { key: 'featureGradeManagement', icon: CheckCircle, descKey: 'featureGradeManagementDesc' },
+    { key: 'featureReportCards', icon: FileText, descKey: 'featureReportCardsDesc' },
+    { key: 'featureSmsEmail', icon: Send, descKey: 'featureSmsEmailDesc' },
+    { key: 'featureAttendanceBehavior', icon: ShieldCheck, descKey: 'featureAttendanceBehaviorDesc' },
+    { key: 'featureTeacherStudentReports', icon: BarChart2, descKey: 'featureTeacherStudentReportsDesc' },
+    { key: 'featureAssignments', icon: Briefcase, descKey: 'featureAssignmentsDesc' },
+    { key: 'featurePhotosDocuments', icon: Camera, descKey: 'featurePhotosDocumentsDesc' },
+    { key: 'featureCommunication', icon: MessageSquare, descKey: 'featureCommunicationDesc' },
   ];
 
   if (loading) {
@@ -75,27 +75,29 @@ export default function HomePage() {
             {t('homePageTitle', 'Report-Manager Lite')}
           </h1>
           
-          <Card className="w-full max-w-3xl my-8 text-left shadow-xl">
+          <Card className="w-full max-w-3xl my-8 text-left shadow-xl bg-card">
             <CardHeader>
               <CardTitle className="text-2xl text-accent">{t('platformGoalTitle', 'Platform Goal')}</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-lg text-foreground leading-relaxed">
+              <p className="text-lg text-card-foreground leading-relaxed">
                 {i18n.language === 'rw' ? t('platformGoalRW') : (i18n.language === 'fr' ? t('platformGoalFR') : t('platformGoalEN'))}
               </p>
             </CardContent>
           </Card>
 
-          <h2 className="text-3xl font-semibold mt-10 mb-6 text-primary">{t('keyFeaturesTitle', 'Key Features')}</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12 max-w-5xl w-full">
+          <h2 className="text-3xl font-semibold mt-10 mb-8 text-primary">{t('keyFeaturesTitle', 'Key Features')}</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-12 max-w-6xl w-full">
             {keyFeatures.map((feature) => (
-              <Card key={feature.key} className="bg-card p-6 rounded-lg shadow-md text-left hover:shadow-lg transition-shadow">
-                <CardHeader className="p-0 mb-3">
-                  <feature.icon className="h-10 w-10 text-accent mx-auto md:mx-0 mb-2" />
+              <Card key={feature.key} className="bg-card text-card-foreground p-6 rounded-lg shadow-md text-left hover:shadow-lg transition-shadow flex flex-col">
+                <CardHeader className="p-0 mb-3 flex-shrink-0">
+                  <div className="flex justify-center md:justify-start mb-2">
+                    <feature.icon className="h-10 w-10 text-accent" />
+                  </div>
                   <CardTitle className="text-xl font-semibold text-primary">{t(feature.key)}</CardTitle>
                 </CardHeader>
-                <CardContent className="p-0">
-                  <p className="text-sm text-muted-foreground">{t(`${feature.key}Desc`)}</p>
+                <CardContent className="p-0 flex-grow">
+                  <p className="text-sm text-muted-foreground">{t(feature.descKey)}</p>
                 </CardContent>
               </Card>
             ))}
@@ -115,7 +117,7 @@ export default function HomePage() {
           </div>
         </main>
 
-        <footer className="w-full p-4 text-center text-sm text-muted-foreground mt-auto">
+        <footer className="w-full p-4 text-center text-sm text-muted-foreground mt-auto bg-card border-t">
           &copy; {new Date().getFullYear()} Report-Manager Lite. {t('allRightsReserved', 'All rights reserved.')}
         </footer>
       </div>
