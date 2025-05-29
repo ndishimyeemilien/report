@@ -25,11 +25,9 @@ export default function HomePage() {
         } else if (userProfile.role === 'Secretary') {
           router.replace("/secretary/dashboard");
         } else {
-          // Fallback or unhandled role
           router.replace("/login"); 
         }
       }
-      // If not loading and not authenticated, the public homepage content will be rendered below.
     }
   }, [currentUser, userProfile, loading, router]);
 
@@ -42,25 +40,24 @@ export default function HomePage() {
     );
   }
 
-  // Only render public homepage if not loading and not authenticated
   if (!currentUser) {
     return (
       <div className="flex min-h-screen flex-col items-center bg-gradient-to-br from-secondary to-background text-foreground">
         <header className="w-full p-4 shadow-md bg-card sticky top-0 z-50">
           <div className="container mx-auto flex justify-between items-center">
             <Logo />
-            <div className="flex items-center gap-2">
+            <nav className="flex items-center gap-4"> {/* Changed div to nav for semantics */}
               <LanguageSwitcher />
               <Button asChild variant="outline">
                 <Link href="/login">
                   <LogIn className="mr-2 h-4 w-4" /> {t('loginButton', 'Login')}
                 </Link>
               </Button>
-            </div>
+            </nav>
           </div>
         </header>
 
-        <main className="flex flex-1 flex-col items-center justify-center p-6 text-center mt-16 mb-8"> {/* Added margin top/bottom */}
+        <main className="flex flex-1 flex-col items-center justify-center p-6 text-center mt-16 mb-8">
           <FileText className="h-20 w-20 text-primary mb-6" data-ai-hint="document report"/>
           <h1 className="text-4xl md:text-5xl font-bold mb-4 text-primary">
             {t('homePageTitle', 'Report-Manager Lite')}
@@ -108,8 +105,6 @@ export default function HomePage() {
     );
   }
 
-  // If loading is false, and currentUser is true, redirect is handled by useEffect.
-  // This return is a fallback for the brief moment before redirection or if something unexpected happens.
   return (
     <div className="flex h-screen items-center justify-center bg-background">
       <Loader2 className="h-16 w-16 animate-spin text-primary" />

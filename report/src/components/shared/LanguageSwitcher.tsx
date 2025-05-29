@@ -4,7 +4,7 @@
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from "react-i18next";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Languages, CaseSensitive, TextCursorInput, Globe, Loader2 } from "lucide-react"; // Assuming Globe and TextCursorInput are desired
+import { Languages, CaseSensitive, TextCursorInput, Globe, Loader2 } from "lucide-react";
 import { Label } from "@/components/ui/label";
 
 export default function LanguageSwitcher() {
@@ -14,8 +14,19 @@ export default function LanguageSwitcher() {
 
   useEffect(() => {
     setIsMounted(true);
-    setCurrentLanguage(i18n.language); 
+    setCurrentLanguage(i18n.language.split('-')[0]); // Use base language e.g. 'en' from 'en-US'
+    console.log("LanguageSwitcher: Mounted. Initial language:", i18n.language);
   }, [i18n.language]);
+
+  useEffect(() => {
+    if (ready) {
+      console.log("LanguageSwitcher: i18next is ready. Current language:", i18n.language);
+      setCurrentLanguage(i18n.language.split('-')[0]);
+    } else {
+      console.log("LanguageSwitcher: i18next not ready yet.");
+    }
+  }, [ready, i18n.language]);
+
 
   const changeLanguage = (lng: string) => {
     console.log("LanguageSwitcher: Attempting to change language to:", lng);
@@ -26,24 +37,24 @@ export default function LanguageSwitcher() {
   if (!isMounted || !ready) {
     return (
       <div className="flex items-center space-x-2">
-        <Label htmlFor="language-select-loading" className="text-sm font-medium text-muted-foreground">{t('loadingLanguages', 'Loading languages...')}</Label>
-        <Select disabled>
-          <SelectTrigger className="w-full md:w-[200px]" id="language-select-loading">
-            <SelectValue placeholder={<Loader2 className="h-5 w-5 animate-spin" />} />
-          </SelectTrigger>
-        </Select>
+        <Button variant="ghost" size="icon" disabled className="opacity-50 animate-pulse">
+            <Languages className="h-5 w-5" />
+            <span className="sr-only">{t('selectLanguage', 'Select Language')}</span>
+        </Button>
       </div>
     );
   }
 
   return (
-    <div className="space-y-2">
-      <Label htmlFor="language-select" className="text-sm font-medium">{t('selectDisplayLanguage', 'Select Display Language')}</Label>
+    <div className="flex items-center gap-2">
       <Select value={currentLanguage} onValueChange={changeLanguage} >
-        <SelectTrigger className="w-full md:w-[200px]" id="language-select">
-          <SelectValue placeholder={t('selectLanguage', 'Select Language')} />
+        <SelectTrigger 
+          className="w-auto bg-transparent border-none shadow-none hover:bg-accent/50 focus:ring-0 px-2 py-1 h-9"
+          aria-label={t('selectLanguageLabel', 'Select display language')}
+        >
+          <Languages className="h-5 w-5 text-muted-foreground group-hover:text-foreground" />
         </SelectTrigger>
-        <SelectContent>
+        <SelectContent align="end">
           <SelectItem value="en">
             <div className="flex items-center">
               <CaseSensitive className="mr-2 h-4 w-4" />
