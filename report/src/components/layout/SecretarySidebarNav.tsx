@@ -5,9 +5,18 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { LayoutDashboard, Users, BookOpen, UsersRound, Archive, Link2 } from "lucide-react";
-import type { NavItem } from "./AdminSidebarNav"; 
-import SidebarLanguageSwitcher from "@/components/shared/SidebarLanguageSwitcher";
+import { LayoutDashboard, Users, BookOpen, UsersRound, Archive, Link2 } from "lucide-react"; 
+import type { NavItem as AdminNavItemType } from "./AdminSidebarNav"; // Reuse NavItem type, but rename to avoid conflict if needed
+// SidebarLanguageSwitcher is removed as LanguageSwitcher is now in headers
+
+// Assuming NavItem is defined as:
+interface NavItem {
+  href: string;
+  label: string; // Or labelKey if using i18n
+  icon: React.ElementType;
+  disabled?: boolean;
+}
+
 
 export const secretaryNavItems: NavItem[] = [
   { href: "/secretary/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -58,7 +67,7 @@ export default function SecretarySidebarNav({ isMobile = false }: SecretarySideb
           </Button>
         );
       })}
-      {!isMobile && <SidebarLanguageSwitcher />}
+      {/* SidebarLanguageSwitcher removed from here */}
     </nav>
   );
 }

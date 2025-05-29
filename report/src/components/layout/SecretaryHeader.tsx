@@ -18,7 +18,7 @@ import Link from "next/link";
 import Logo from "../shared/Logo";
 import SecretarySidebarNav from "./SecretarySidebarNav"; 
 import { useState, useEffect } from "react";
-// LanguageSwitcher is removed from here
+import LanguageSwitcher from "@/components/shared/LanguageSwitcher";
 
 const ThemeToggle = () => {
   const [isDarkMode, setIsDarkMode] = useState(false);
@@ -82,7 +82,7 @@ export default function SecretaryHeader() {
       </div>
       
       <div className="flex w-full items-center justify-end gap-2 md:ml-auto"> 
-        {/* LanguageSwitcher removed from here */}
+        <LanguageSwitcher />
         <ThemeToggle />
         {currentUser && userProfile ? (
           <DropdownMenu>
@@ -108,6 +108,14 @@ export default function SecretaryHeader() {
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
+              {/* Secretary might have a settings page similar to admin or simpler */}
+              {/* <DropdownMenuItem asChild>
+                <Link href="/secretary/settings">
+                  <Settings className="mr-2 h-4 w-4" />
+                  <span>Settings</span>
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator /> */}
               <DropdownMenuItem onClick={logout}>
                 <LogOut className="mr-2 h-4 w-4" />
                 <span>Log out</span>

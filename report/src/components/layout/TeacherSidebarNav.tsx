@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { LayoutDashboard, BookOpen, Edit, CheckSquare } from "lucide-react"; 
-import SidebarLanguageSwitcher from "@/components/shared/SidebarLanguageSwitcher";
+// SidebarLanguageSwitcher is removed as LanguageSwitcher is now in headers
 
 export interface NavItem {
   href: string;
@@ -15,7 +15,6 @@ export interface NavItem {
   disabled?: boolean;
 }
 
-// Teacher specific navigation
 export const teacherNavItems: NavItem[] = [
   { href: "/teacher/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/teacher/courses", label: "My Courses", icon: BookOpen }, 
@@ -63,7 +62,7 @@ export default function TeacherSidebarNav({ isMobile = false }: TeacherSidebarNa
           </Button>
         );
       })}
-      {!isMobile && <SidebarLanguageSwitcher />}
+      {/* SidebarLanguageSwitcher removed from here */}
     </nav>
   );
 }

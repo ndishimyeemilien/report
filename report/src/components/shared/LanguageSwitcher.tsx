@@ -16,27 +16,14 @@ import { cn } from '@/lib/utils';
 export default function LanguageSwitcher() {
   const { i18n, t, ready } = useTranslation();
   const [isMounted, setIsMounted] = useState(false);
-  const [currentLanguageDisplay, setCurrentLanguageDisplay] = useState('');
 
   useEffect(() => {
     setIsMounted(true);
-    // console.log("[LanguageSwitcher] Mounted. i18n.language:", i18n.language, "i18n.isInitialized:", i18n.isInitialized, "i18n.ready:", ready);
-  }, []);
+    // console.log("[LanguageSwitcher Header] Mounted. i18n.language:", i18n.language, "i18n.isInitialized:", i18n.isInitialized, "i18n.ready:", ready);
+  }, [i18n.language, i18n.isInitialized, ready]);
   
-  useEffect(() => {
-    if (ready && isMounted) {
-      const lang = i18n.language.split('-')[0];
-      // console.log("[LanguageSwitcher] i18n ready. Current lang:", lang);
-      if (lang === 'en') setCurrentLanguageDisplay(t('english'));
-      else if (lang === 'fr') setCurrentLanguageDisplay(t('french'));
-      else if (lang === 'rw') setCurrentLanguageDisplay(t('kinyarwanda'));
-      else setCurrentLanguageDisplay(t('english')); // Fallback
-    }
-  }, [ready, i18n.language, t, isMounted]);
-
-
   const changeLanguage = (lng: string) => {
-    // console.log("[LanguageSwitcher] Changing language to:", lng);
+    // console.log("[LanguageSwitcher Header] Changing language to:", lng);
     i18n.changeLanguage(lng);
   };
 
@@ -48,7 +35,6 @@ export default function LanguageSwitcher() {
       </Button>
     );
   }
-  // console.log("[LanguageSwitcher] Rendering full button. Current display:", currentLanguageDisplay);
 
   return (
     <DropdownMenu>
@@ -59,23 +45,28 @@ export default function LanguageSwitcher() {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-48">
-        <DropdownMenuItem onClick={() => changeLanguage("en")} className={cn(i18n.language.startsWith('en') && "bg-accent")}>
-          <CaseSensitive className="mr-2 h-4 w-4" />
-          <span>{t('english', 'English')}</span>
-          <span className="ml-auto text-xs text-muted-foreground">EN</span>
+        <DropdownMenuItem onClick={() => changeLanguage("en")} className={cn("flex justify-between items-center", i18n.language.startsWith('en') && "bg-accent")}>
+          <span className="flex items-center">
+            <CaseSensitive className="mr-2 h-4 w-4" />
+            <span>{t('english', 'English')}</span>
+          </span>
+          <span className="text-xs text-muted-foreground">EN</span>
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => changeLanguage("fr")} className={cn(i18n.language.startsWith('fr') && "bg-accent")}>
-          <Globe className="mr-2 h-4 w-4" />
-          <span>{t('french', 'Français')}</span>
-          <span className="ml-auto text-xs text-muted-foreground">FR</span>
+        <DropdownMenuItem onClick={() => changeLanguage("fr")} className={cn("flex justify-between items-center", i18n.language.startsWith('fr') && "bg-accent")}>
+          <span className="flex items-center">
+            <Globe className="mr-2 h-4 w-4" />
+            <span>{t('french', 'Français')}</span>
+          </span>
+          <span className="text-xs text-muted-foreground">FR</span>
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => changeLanguage("rw")} className={cn(i18n.language.startsWith('rw') && "bg-accent")}>
-          <TextCursorInput className="mr-2 h-4 w-4" />
-          <span>{t('kinyarwanda', 'Kinyarwanda')}</span>
-          <span className="ml-auto text-xs text-muted-foreground">RW</span>
+        <DropdownMenuItem onClick={() => changeLanguage("rw")} className={cn("flex justify-between items-center", i18n.language.startsWith('rw') && "bg-accent")}>
+          <span className="flex items-center">
+            <TextCursorInput className="mr-2 h-4 w-4" />
+            <span>{t('kinyarwanda', 'Kinyarwanda')}</span>
+          </span>
+          <span className="text-xs text-muted-foreground">RW</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );
 }
-

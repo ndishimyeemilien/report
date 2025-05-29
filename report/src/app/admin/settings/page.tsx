@@ -18,7 +18,6 @@ import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import type { SystemSettings } from "@/types";
 import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
-// LanguageSwitcher is removed from here
 import { useTranslation } from "react-i18next"; 
 
 const systemSettingsSchema = z.object({
@@ -136,8 +135,6 @@ export default function AdminSettingsPage() {
             <ChangePasswordForm />
           </CardContent>
         </Card>
-        
-        {/* LanguageSwitcher removed from here. Now it's in the sidebars. */}
         
         <Card className="lg:col-span-3">
           <CardHeader>

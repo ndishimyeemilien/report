@@ -6,17 +6,16 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { LayoutDashboard, BookOpen, ClipboardList, FileText, Settings, Users, UserCog, Users2, Archive, CalendarClock, Group, MessageSquare } from "lucide-react";
-import SidebarLanguageSwitcher from "@/components/shared/SidebarLanguageSwitcher";
+// SidebarLanguageSwitcher is removed as LanguageSwitcher is now in headers
 import { useTranslation } from "react-i18next";
 
 export interface NavItem {
   href: string;
-  labelKey: string; // Changed from label to labelKey
+  labelKey: string; 
   icon: React.ElementType;
   disabled?: boolean;
 }
 
-// Admin specific navigation
 export const adminNavItemsData: NavItem[] = [
   { href: "/admin/dashboard", labelKey: "navAdminDashboard", icon: LayoutDashboard },
   { href: "/admin/dashboard/courses", labelKey: "navAdminSubjects", icon: BookOpen }, 
@@ -94,7 +93,7 @@ export default function AdminSidebarNav({ isMobile = false }: AdminSidebarNavPro
           </Button>
         );
       })}
-      {!isMobile && <SidebarLanguageSwitcher />}
+      {/* SidebarLanguageSwitcher removed from here */}
     </nav>
   );
 }

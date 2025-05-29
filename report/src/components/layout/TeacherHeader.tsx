@@ -18,7 +18,7 @@ import Link from "next/link";
 import Logo from "../shared/Logo";
 import TeacherSidebarNav from "./TeacherSidebarNav"; 
 import { useState, useEffect } from "react";
-// LanguageSwitcher is removed from here
+import LanguageSwitcher from "@/components/shared/LanguageSwitcher";
 
 const ThemeToggle = () => {
   const [isDarkMode, setIsDarkMode] = useState(false);
@@ -82,7 +82,7 @@ export default function TeacherHeader() {
       </div>
       
       <div className="flex w-full items-center justify-end gap-2 md:ml-auto"> 
-        {/* LanguageSwitcher removed from here */}
+        <LanguageSwitcher />
         <ThemeToggle />
         {currentUser && userProfile ? (
           <DropdownMenu>

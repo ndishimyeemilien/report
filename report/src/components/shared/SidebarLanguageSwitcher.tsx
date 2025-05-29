@@ -1,92 +1,67 @@
-
 "use client";
 
-import React, { useEffect, useState } from 'react';
-import { useTranslation } from "react-i18next";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Languages, CaseSensitive, Globe, TextCursorInput, ChevronDown, Loader2 } from "lucide-react";
-import { cn } from '@/lib/utils';
+import { LayoutDashboard, BookOpen, Edit, CheckSquare } from "lucide-react"; 
+// SidebarLanguageSwitcher is removed as LanguageSwitcher is now in headers
 
-export default function SidebarLanguageSwitcher() {
-  const { i18n, t, ready } = useTranslation();
-  const [isMounted, setIsMounted] = useState(false);
-  const [currentLanguageDisplay, setCurrentLanguageDisplay] = useState('');
+export interface NavItem {
+  href: string;
+  label: string;
+  icon: React.ElementType;
+  disabled?: boolean;
+}
 
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
-  
-  useEffect(() => {
-    if (ready && isMounted) {
-      const lang = i18n.language.split('-')[0];
-      if (lang === 'en') setCurrentLanguageDisplay(t('english', 'English'));
-      else if (lang === 'fr') setCurrentLanguageDisplay(t('french', 'Français'));
-      else if (lang === 'rw') setCurrentLanguageDisplay(t('kinyarwanda', 'Kinyarwanda'));
-      else setCurrentLanguageDisplay(t('english', 'English')); // Fallback
-    }
-  }, [ready, i18n.language, t, isMounted]);
+export const teacherNavItems: NavItem[] = [
+  { href: "/teacher/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/teacher/courses", label: "My Courses", icon: BookOpen }, 
+  { href: "/teacher/grades", label: "Enter Grades", icon: Edit },
+  { href: "/teacher/attendance", label: "Attendance", icon: CheckSquare },
+];
 
-  const changeLanguage = (lng: string) => {
-    i18n.changeLanguage(lng);
-  };
+interface TeacherSidebarNavProps {
+  isMobile?: boolean;
+}
 
-  if (!isMounted || !ready) {
-    return (
-      <Button
-        variant="ghost"
-        className="justify-start w-full mt-2 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-        disabled
-      >
-        <Loader2 className="mr-3 h-5 w-5 animate-spin" />
-        {t('loadingLanguage', 'Loading Language...')}
-      </Button>
-    );
-  }
+export default function TeacherSidebarNav({ isMobile = false }: TeacherSidebarNavProps) {
+  const pathname = usePathname();
+  const navItems = teacherNavItems;
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button 
-            variant="ghost" 
-            className="justify-between w-full mt-4 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground" 
-            aria-label={t('selectLanguage', 'Select Language')}
-        >
-            <span className="flex items-center">
-                <Languages className="mr-3 h-5 w-5" />
-                {t('language', 'Language')}
-            </span>
-          <ChevronDown className="h-4 w-4" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" side="right" className="w-56">
-        <DropdownMenuItem onClick={() => changeLanguage("en")} className={cn("flex justify-between", i18n.language.startsWith('en') && "bg-accent")}>
-          <span className="flex items-center">
-            <CaseSensitive className="mr-2 h-4 w-4" />
-            <span>{t('english', 'English')}</span>
-          </span>
-          <span className="text-xs text-muted-foreground">EN</span>
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => changeLanguage("fr")} className={cn("flex justify-between", i18n.language.startsWith('fr') && "bg-accent")}>
-          <span className="flex items-center">
-            <Globe className="mr-2 h-4 w-4" />
-            <span>{t('french', 'Français')}</span>
-          </span>
-          <span className="text-xs text-muted-foreground">FR</span>
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => changeLanguage("rw")} className={cn("flex justify-between", i18n.language.startsWith('rw') && "bg-accent")}>
-          <span className="flex items-center">
-            <TextCursorInput className="mr-2 h-4 w-4" />
-            <span>{t('kinyarwanda', 'Kinyarwanda')}</span>
-          </span>
-          <span className="text-xs text-muted-foreground">RW</span>
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <nav className={cn("flex flex-col gap-1 px-2 py-4", isMobile ? "" : "md:px-4")}>
+      {navItems.map((item) => {
+        const isActive =
+          pathname === item.href ||
+          (pathname.startsWith(item.href) && item.href !== "/teacher/dashboard");
+
+        const buttonVariant = isActive ? "default" : "ghost";
+
+        const buttonClassName = cn(
+          "justify-start w-full",
+          isActive
+            ? "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90"
+            : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+          item.disabled && "cursor-not-allowed opacity-50"
+        );
+        
+        return (
+          <Button
+            key={item.label}
+            asChild
+            variant={buttonVariant}
+            className={buttonClassName}
+            disabled={item.disabled}
+          >
+            <Link href={item.disabled ? "#" : item.href}>
+              <item.icon className="mr-3 h-5 w-5" />
+              {item.label}
+            </Link>
+          </Button>
+        );
+      })}
+      {/* SidebarLanguageSwitcher removed from here */}
+    </nav>
   );
 }
