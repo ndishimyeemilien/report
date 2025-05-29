@@ -7,7 +7,7 @@ import { Loader2, LogIn, Info, FileText, Users, CheckCircle } from "lucide-react
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import Logo from "@/components/shared/Logo";
-import LanguageSwitcher from "@/components/shared/LanguageSwitcher";
+// LanguageSwitcher is removed from here
 import { useTranslation } from "react-i18next";
 
 export default function HomePage() {
@@ -47,7 +47,7 @@ export default function HomePage() {
           <div className="container mx-auto flex justify-between items-center">
             <Logo />
             <nav className="flex items-center gap-2">
-              <LanguageSwitcher />
+              {/* LanguageSwitcher removed from here. Users will rely on browser default or default language until login. */}
               <Button asChild variant="outline">
                 <Link href="/login">
                   <LogIn className="mr-2 h-4 w-4" /> {t('loginButton', 'Login')}
@@ -105,8 +105,6 @@ export default function HomePage() {
     );
   }
 
-  // This part should ideally not be reached if redirection is working correctly,
-  // but it's good to have a fallback.
   return (
     <div className="flex h-screen items-center justify-center bg-background">
       <Loader2 className="h-16 w-16 animate-spin text-primary" />

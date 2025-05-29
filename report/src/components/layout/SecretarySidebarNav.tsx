@@ -5,17 +5,17 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { LayoutDashboard, Users, BookOpen, UsersRound, Archive, Link2 } from "lucide-react"; // UsersRound for enrollments, Archive for Classes, Link2 for Class Assignments
-import type { NavItem } from "./AdminSidebarNav"; // Reuse NavItem type
+import { LayoutDashboard, Users, BookOpen, UsersRound, Archive, Link2 } from "lucide-react";
+import type { NavItem } from "./AdminSidebarNav"; 
+import SidebarLanguageSwitcher from "@/components/shared/SidebarLanguageSwitcher";
 
 export const secretaryNavItems: NavItem[] = [
   { href: "/secretary/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/secretary/students", label: "Students", icon: Users },
-  { href: "/secretary/classes", label: "Classes", icon: Archive }, // New link for classes
+  { href: "/secretary/classes", label: "Classes", icon: Archive }, 
   { href: "/secretary/courses", label: "Courses", icon: BookOpen },
-  { href: "/secretary/class-assignments", label: "Class Assignments", icon: Link2 }, // New link for class-course assignments
+  { href: "/secretary/class-assignments", label: "Class Assignments", icon: Link2 }, 
   { href: "/secretary/enrollments", label: "Student Enrollments", icon: UsersRound }, 
-  // { href: "/secretary/settings", label: "Settings", icon: SettingsIcon }, // Optional
 ];
 
 interface SecretarySidebarNavProps {
@@ -27,7 +27,7 @@ export default function SecretarySidebarNav({ isMobile = false }: SecretarySideb
   const navItems = secretaryNavItems;
 
   return (
-    <nav className={cn("flex flex-col gap-2 px-2 py-4", isMobile ? "" : "md:px-4")}>
+    <nav className={cn("flex flex-col gap-1 px-2 py-4", isMobile ? "" : "md:px-4")}>
       {navItems.map((item) => {
         const isActive =
           pathname === item.href ||
@@ -45,7 +45,7 @@ export default function SecretarySidebarNav({ isMobile = false }: SecretarySideb
 
         return (
           <Button
-            key={item.href}
+            key={item.label}
             asChild
             variant={buttonVariant}
             className={buttonClassName}
@@ -58,6 +58,7 @@ export default function SecretarySidebarNav({ isMobile = false }: SecretarySideb
           </Button>
         );
       })}
+      {!isMobile && <SidebarLanguageSwitcher />}
     </nav>
   );
 }

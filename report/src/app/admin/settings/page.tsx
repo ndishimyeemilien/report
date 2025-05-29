@@ -18,7 +18,7 @@ import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import type { SystemSettings } from "@/types";
 import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
-import LanguageSwitcher from "@/components/shared/LanguageSwitcher"; 
+// LanguageSwitcher is removed from here
 import { useTranslation } from "react-i18next"; 
 
 const systemSettingsSchema = z.object({
@@ -137,24 +137,12 @@ export default function AdminSettingsPage() {
           </CardContent>
         </Card>
         
+        {/* LanguageSwitcher removed from here. Now it's in the sidebars. */}
+        
         <Card className="lg:col-span-3">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
                <BookCopy className="h-5 w-5 text-primary" /> 
-              {t('languageSettingsTitle', 'Language Settings')}
-            </CardTitle>
-            <CardDescription>{t('languageSettingsDescription', 'Choose your preferred display language for the application.')}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <LanguageSwitcher />
-          </CardContent>
-        </Card>
-        
-
-        <Card className="lg:col-span-3">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <BookCopy className="h-5 w-5 text-primary" /> 
               {t('systemDefaultsTitle', 'System Defaults & Information')}
             </CardTitle>
             <CardDescription>{t('systemDefaultsDescription', 'Set system-wide default values and school information.')}</CardDescription>
@@ -177,7 +165,7 @@ export default function AdminSettingsPage() {
                           <School className="h-4 w-4" /> {t('schoolNameLabel', 'School Name (for Report Cards)')}
                         </FormLabel>
                         <FormControl>
-                          <Input placeholder={t('schoolNamePlaceholder', 'e.g., College de Bethel / APARU')} {...field} />
+                          <Input placeholder={t('schoolNamePlaceholder', 'e.g., College de Bethel / APARU')} {...field} value={field.value ?? ''} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -191,7 +179,7 @@ export default function AdminSettingsPage() {
                       <FormItem>
                         <FormLabel>{t('defaultAcademicYearLabel', 'Default Academic Year')}</FormLabel>
                         <FormControl>
-                          <Input placeholder={t('academicYearPlaceholder', 'e.g., 2024-2025')} {...field} />
+                          <Input placeholder={t('academicYearPlaceholder', 'e.g., 2024-2025')} {...field} value={field.value ?? ''} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -204,7 +192,7 @@ export default function AdminSettingsPage() {
                       <FormItem>
                         <FormLabel>{t('defaultTermLabel', 'Default Term')}</FormLabel>
                         <FormControl>
-                          <Input placeholder={t('termPlaceholder', 'e.g., Term 1, Semester 1')} {...field} />
+                          <Input placeholder={t('termPlaceholder', 'e.g., Term 1, Semester 1')} {...field} value={field.value ?? ''} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
