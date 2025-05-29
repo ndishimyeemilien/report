@@ -19,11 +19,11 @@ export default function LanguageSwitcher() {
 
   useEffect(() => {
     setIsMounted(true);
-    console.log("[LanguageSwitcher] Mounted. i18n.language:", i18n.language, "i18n.isInitialized:", i18n.isInitialized, "i18n.ready:", ready);
+    // console.log("[LanguageSwitcher] Mounted. i18n.language:", i18n.language, "i18n.isInitialized:", i18n.isInitialized, "i18n.ready:", ready);
   }, [i18n, ready]);
   
   const changeLanguage = (lng: string) => {
-    console.log("[LanguageSwitcher] Changing language to:", lng);
+    // console.log("[LanguageSwitcher] Changing language to:", lng);
     i18n.changeLanguage(lng);
   };
 
@@ -51,7 +51,7 @@ export default function LanguageSwitcher() {
           aria-current={i18n.language.startsWith('en') ? "page" : undefined}
         >
           <span className="flex items-center">
-            <CaseSensitive className="mr-2 h-4 w-4" /> {/* Icon for English */}
+            <CaseSensitive className="mr-2 h-4 w-4" />
             <span>{t('english', 'English')}</span>
           </span>
           <span className="text-xs text-muted-foreground">EN</span>
@@ -62,7 +62,7 @@ export default function LanguageSwitcher() {
           aria-current={i18n.language.startsWith('fr') ? "page" : undefined}
         >
           <span className="flex items-center">
-            <Globe className="mr-2 h-4 w-4" /> {/* Icon for French */}
+            <Globe className="mr-2 h-4 w-4" />
             <span>{t('french', 'Français')}</span>
           </span>
           <span className="text-xs text-muted-foreground">FR</span>
@@ -73,7 +73,7 @@ export default function LanguageSwitcher() {
           aria-current={i18n.language.startsWith('rw') ? "page" : undefined}
         >
           <span className="flex items-center">
-            <TextCursorInput className="mr-2 h-4 w-4" /> {/* Icon for Kinyarwanda */}
+            <TextCursorInput className="mr-2 h-4 w-4" />
             <span>{t('kinyarwanda', 'Kinyarwanda')}</span>
           </span>
           <span className="text-xs text-muted-foreground">RW</span>
