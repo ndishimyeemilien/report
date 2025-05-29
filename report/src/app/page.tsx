@@ -46,7 +46,7 @@ export default function HomePage() {
         <header className="w-full p-4 shadow-md bg-card sticky top-0 z-50">
           <div className="container mx-auto flex justify-between items-center">
             <Logo />
-            <nav className="flex items-center gap-4"> {/* Changed div to nav for semantics */}
+            <nav className="flex items-center gap-2">
               <LanguageSwitcher />
               <Button asChild variant="outline">
                 <Link href="/login">
@@ -105,6 +105,8 @@ export default function HomePage() {
     );
   }
 
+  // This part should ideally not be reached if redirection is working correctly,
+  // but it's good to have a fallback.
   return (
     <div className="flex h-screen items-center justify-center bg-background">
       <Loader2 className="h-16 w-16 animate-spin text-primary" />

@@ -9,6 +9,7 @@ i18n
   .use(LanguageDetector) // detect user language
   .use(initReactI18next) // passes i18n down to react-i18next
   .init({
+    supportedLngs: ['en', 'fr', 'rw'],
     fallbackLng: 'en',
     debug: process.env.NODE_ENV === 'development', // Enable debug output in development
     interpolation: {
