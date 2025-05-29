@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Button } from "@/components/ui/button";
@@ -7,8 +8,8 @@ import type { Course } from "@/types";
 import { db } from "@/lib/firebase";
 import { collection, deleteDoc, doc, getDocs, query, orderBy, Timestamp, where } from "firebase/firestore";
 import { useEffect, useState, useMemo } from "react";
-import { PlusCircle, Edit3, Trash2, BookOpen, Loader2, AlertTriangle, UserCheck, Filter } from "lucide-react";
-import { Label as FormLabel } from "@/components/ui/label"; // Renamed to avoid conflict with FormLabel from react-hook-form if used elsewhere
+import { PlusCircle, Edit3, Trash2, BookOpen, Loader2, AlertTriangle, UserCheck, Filter, Briefcase } from "lucide-react"; // Added Briefcase
+import { Label as FormLabel } from "@/components/ui/label"; 
 import {
   Dialog,
   DialogContent,
@@ -41,11 +42,11 @@ import { Badge } from "@/components/ui/badge";
 import { subjectData, categories as predefinedCategories, getCombinationsForCategory } from "@/lib/course-structure-data";
 
 export default function CoursesPage() {
-  const [allCourses, setAllCourses] = useState<Course[]>([]); // All subjects from Firestore
+  const [allCourses, setAllCourses] = useState<Course[]>([]); 
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [editingCourse, setEditingCourse] = useState<Course | null>(null); // This is an individual subject
+  const [editingCourse, setEditingCourse] = useState<Course | null>(null); 
   
   const [selectedCategory, setSelectedCategory] = useState<string>("");
   const [selectedCombination, setSelectedCombination] = useState<string>("");
@@ -59,7 +60,6 @@ export default function CoursesPage() {
     return [];
   }, [selectedCategory]);
 
-  // Filtered courses (subjects) based on selections
   const filteredCourses = useMemo(() => {
     if (!selectedCategory || !selectedCombination) {
       return []; 
@@ -96,7 +96,6 @@ export default function CoursesPage() {
     fetchAllSubjects();
   }, []);
 
-  // Reset combination when category changes
   useEffect(() => {
     setSelectedCombination("");
   }, [selectedCategory]);
@@ -111,7 +110,7 @@ export default function CoursesPage() {
       toast({title: "Selection Required", description: "Please select a category and combination first.", variant: "default"});
       return;
     }
-    setEditingCourse(null); // Ensure it's a new subject
+    setEditingCourse(null); 
     setIsFormOpen(true);
   };
 
@@ -166,7 +165,6 @@ export default function CoursesPage() {
         </Dialog>
       </div>
 
-      {/* Category and Combination Selectors */}
       <Card className="mb-8 shadow">
         <CardHeader>
           <CardTitle className="flex items-center gap-2"><Filter className="h-5 w-5 text-primary"/> Filter Subjects</CardTitle>
@@ -264,7 +262,7 @@ export default function CoursesPage() {
             <CardDescription>A list of all subjects within this category and combination.</CardDescription>
           </CardHeader>
           <CardContent>
-            <ScrollArea className="h-[calc(100vh-30rem)]"> {/* Adjusted height */}
+            <ScrollArea className="h-[calc(100vh-30rem)]"> 
               <div className="space-y-4">
                 {filteredCourses.map((course) => (
                   <Card key={course.id} className="hover:shadow-md transition-shadow">
@@ -275,12 +273,20 @@ export default function CoursesPage() {
                           <CardDescription className="pt-1 text-sm">
                             {course.description || "No description provided."}
                           </CardDescription>
-                           {course.teacherName && (
-                            <Badge variant="secondary" className="mt-2 text-xs">
-                              <UserCheck className="mr-1.5 h-3 w-3" />
-                              Teacher: {course.teacherName}
-                            </Badge>
-                          )}
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            {course.teacherName && (
+                                <Badge variant="secondary" className="mt-2 text-xs">
+                                <UserCheck className="mr-1.5 h-3 w-3" />
+                                Teacher: {course.teacherName}
+                                </Badge>
+                            )}
+                            {course.department && (
+                                <Badge variant="outline" className="mt-2 text-xs">
+                                <Briefcase className="mr-1.5 h-3 w-3" />
+                                Department: {course.department}
+                                </Badge>
+                            )}
+                           </div>
                         </div>
                         <div className="flex items-center gap-2">
                           <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => handleEdit(course)}>

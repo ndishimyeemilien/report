@@ -26,14 +26,15 @@ import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover
 import { CalendarIcon } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { format, parseISO } from "date-fns";
-import { cn } from "@/lib/utils"; // Added missing import
+import { cn } from "@/lib/utils";
 
 const studentFormSchema = z.object({
   fullName: z.string().min(3, { message: "Full name must be at least 3 characters." }).max(100),
   studentSystemId: z.string().max(50).optional().describe("School's unique ID for the student, e.g., S1001"),
   email: z.string().email({ message: "Invalid email address." }).optional().or(z.literal("")),
+  gender: z.enum(['Male', 'Female', 'Other', '']).optional(),
   classId: z.string().optional(),
-  dateOfBirth: z.string().optional(), // Storing as string for simplicity, can be Date object
+  dateOfBirth: z.string().optional(), 
   placeOfBirth: z.string().max(100).optional(),
 });
 
@@ -45,6 +46,7 @@ interface StudentFormProps {
 }
 
 const NONE_CLASS_VALUE = "_NONE_";
+const NONE_GENDER_VALUE = "";
 
 export function StudentForm({ initialData, onClose }: StudentFormProps) {
   const { toast } = useToast();
@@ -77,6 +79,7 @@ export function StudentForm({ initialData, onClose }: StudentFormProps) {
       fullName: initialData.fullName,
       studentSystemId: initialData.studentSystemId || "",
       email: initialData.email || "",
+      gender: initialData.gender || NONE_GENDER_VALUE,
       classId: initialData.classId || "",
       dateOfBirth: initialData.dateOfBirth ? format(parseISO(initialData.dateOfBirth), "yyyy-MM-dd") : "",
       placeOfBirth: initialData.placeOfBirth || "",
@@ -84,6 +87,7 @@ export function StudentForm({ initialData, onClose }: StudentFormProps) {
       fullName: "",
       studentSystemId: "",
       email: "",
+      gender: NONE_GENDER_VALUE,
       classId: "",
       dateOfBirth: "",
       placeOfBirth: "",
@@ -98,7 +102,6 @@ export function StudentForm({ initialData, onClose }: StudentFormProps) {
         updatedAt: serverTimestamp(),
     };
 
-    // Handle optional fields: only include them if they have a value.
     if (values.studentSystemId && values.studentSystemId.trim() !== "") {
         studentData.studentSystemId = values.studentSystemId.trim();
     } else if (initialData?.id) { 
@@ -109,6 +112,12 @@ export function StudentForm({ initialData, onClose }: StudentFormProps) {
         studentData.email = values.email.trim();
     } else if (initialData?.id) { 
         studentData.email = deleteField();
+    }
+
+    if (values.gender && values.gender !== NONE_GENDER_VALUE) {
+        studentData.gender = values.gender;
+    } else if (initialData?.id) {
+        studentData.gender = deleteField();
     }
     
     if (values.classId && values.classId !== NONE_CLASS_VALUE) {
@@ -121,7 +130,7 @@ export function StudentForm({ initialData, onClose }: StudentFormProps) {
     }
 
     if (values.dateOfBirth) {
-        studentData.dateOfBirth = values.dateOfBirth; // Already a string in 'yyyy-MM-dd' format
+        studentData.dateOfBirth = values.dateOfBirth; 
     } else if (initialData?.id) {
         studentData.dateOfBirth = deleteField();
     }
@@ -143,8 +152,8 @@ export function StudentForm({ initialData, onClose }: StudentFormProps) {
             createdAt: serverTimestamp(),
         };
         Object.keys(dataForAdd).forEach(key => {
-            if (dataForAdd[key] === undefined && key !== 'createdAt' && key !== 'updatedAt' && key !== 'fullName') {
-                delete dataForAdd[key];
+            if (dataForAdd[key as keyof typeof dataForAdd] === undefined && key !== 'createdAt' && key !== 'updatedAt' && key !== 'fullName') {
+                delete dataForAdd[key as keyof typeof dataForAdd];
             }
         });
         await addDoc(collection(db, "students"), dataForAdd);
@@ -161,7 +170,7 @@ export function StudentForm({ initialData, onClose }: StudentFormProps) {
       });
     } finally {
       setIsLoading(false);
-      if (!initialData?.id) form.reset({ fullName: "", studentSystemId: "", email: "", classId: "", dateOfBirth: "", placeOfBirth: ""}); 
+      if (!initialData?.id) form.reset({ fullName: "", studentSystemId: "", email: "", gender: NONE_GENDER_VALUE, classId: "", dateOfBirth: "", placeOfBirth: ""}); 
     }
   };
 
@@ -181,19 +190,47 @@ export function StudentForm({ initialData, onClose }: StudentFormProps) {
             </FormItem>
           )}
         />
-        <FormField
-          control={form.control}
-          name="studentSystemId"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Student ID (Optional)</FormLabel>
-              <FormControl>
-                <Input placeholder="e.g., S1001, 2024005" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField
+            control={form.control}
+            name="studentSystemId"
+            render={({ field }) => (
+                <FormItem>
+                <FormLabel>Student ID (Optional)</FormLabel>
+                <FormControl>
+                    <Input placeholder="e.g., S1001, 2024005" {...field} />
+                </FormControl>
+                <FormMessage />
+                </FormItem>
+            )}
+            />
+            <FormField
+            control={form.control}
+            name="gender"
+            render={({ field }) => (
+                <FormItem>
+                <FormLabel>Gender (Optional)</FormLabel>
+                <Select
+                    onValueChange={field.onChange}
+                    value={field.value || NONE_GENDER_VALUE}
+                >
+                    <FormControl>
+                    <SelectTrigger>
+                        <SelectValue placeholder="Select gender" />
+                    </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                    <SelectItem value={NONE_GENDER_VALUE}>-- Select Gender --</SelectItem>
+                    <SelectItem value="Male">Male</SelectItem>
+                    <SelectItem value="Female">Female</SelectItem>
+                    <SelectItem value="Other">Other</SelectItem>
+                    </SelectContent>
+                </Select>
+                <FormMessage />
+                </FormItem>
+            )}
+            />
+        </div>
         <FormField
           control={form.control}
           name="email"
@@ -316,4 +353,3 @@ export function StudentForm({ initialData, onClose }: StudentFormProps) {
     </Form>
   );
 }
-

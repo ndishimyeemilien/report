@@ -25,13 +25,12 @@ import { useState, useEffect } from "react";
 import { Loader2 } from "lucide-react";
 
 const courseFormSchema = z.object({
-  name: z.string().min(2, { message: "Subject name must be at least 2 characters." }).max(100), // Changed from Course name to Subject name
+  name: z.string().min(2, { message: "Subject name must be at least 2 characters." }).max(100),
   code: z.string().min(2, { message: "Subject code must be at least 2 characters." }).max(20)
     .regex(/^[A-Z0-9\s-]+$/, "Subject code can only contain uppercase letters, numbers, spaces, and hyphens."),
   description: z.string().max(500).optional(),
   teacherId: z.string().optional(),
-  // Category and Combination will be passed via initialData or props, not directly editable in this form
-  // but are required for saving.
+  department: z.string().max(100).optional(),
   category: z.string().min(1, "Category is required."),
   combination: z.string().min(1, "Combination is required."),
 });
@@ -39,9 +38,8 @@ const courseFormSchema = z.object({
 type CourseFormValues = z.infer<typeof courseFormSchema>;
 
 interface CourseFormProps {
-  initialData?: Partial<Course> | null; // Can be partial for new courses if category/combo passed
+  initialData?: Partial<Course> | null; 
   onClose?: () => void;
-  // Selected category and combination must be provided if not in initialData (e.g. for new subject)
   selectedCategory?: string;
   selectedCombination?: string;
 }
@@ -86,12 +84,12 @@ export function CourseForm({ initialData, onClose, selectedCategory, selectedCom
       code: initialData?.code || "",
       description: initialData?.description || "",
       teacherId: initialData?.teacherId || "",
+      department: initialData?.department || "",
       category: defaultCategory,
       combination: defaultCombination,
     },
   });
   
-  // Watch category and combination to ensure they are part of the form's values if passed as props
   useEffect(() => {
     if (selectedCategory && form.getValues("category") !== selectedCategory) {
       form.setValue("category", selectedCategory);
@@ -117,6 +115,7 @@ export function CourseForm({ initialData, onClose, selectedCategory, selectedCom
         description?: string | null | FieldValue;
         teacherId?: string | FieldValue; 
         teacherName?: string | null | FieldValue; 
+        department?: string | null | FieldValue;
         category: string;
         combination: string;
         updatedAt: FieldValue;
@@ -138,10 +137,16 @@ export function CourseForm({ initialData, onClose, selectedCategory, selectedCom
     if (values.teacherId && values.teacherId !== NONE_TEACHER_VALUE) {
         const selectedTeacher = teachers.find(t => t.uid === values.teacherId);
         dataForFirestore.teacherId = values.teacherId;
-        dataForFirestore.teacherName = selectedTeacher?.email || null; // Store email as teacherName
-    } else { // If "None" is selected or teacherId is empty
+        dataForFirestore.teacherName = selectedTeacher?.email || null; 
+    } else { 
         dataForFirestore.teacherId = deleteField();
         dataForFirestore.teacherName = deleteField();
+    }
+
+    if (values.department && values.department.trim() !== "") {
+        dataForFirestore.department = values.department;
+    } else {
+        dataForFirestore.department = initialData?.id ? deleteField() : null;
     }
 
 
@@ -152,9 +157,8 @@ export function CourseForm({ initialData, onClose, selectedCategory, selectedCom
         toast({ title: "Subject Updated", description: `Subject "${values.name}" has been successfully updated.` });
       } else { 
         dataForFirestore.createdAt = serverTimestamp();
-        // Ensure no undefined fields are sent for new docs, except for description which can be null
         Object.keys(dataForFirestore).forEach(key => {
-             if (dataForFirestore[key as keyof typeof dataForFirestore] === undefined && key !== 'description') {
+             if (dataForFirestore[key as keyof typeof dataForFirestore] === undefined && key !== 'description' && key !== 'department') { // Allow null for description and department
                  delete dataForFirestore[key as keyof typeof dataForFirestore];
              }
         });
@@ -177,7 +181,8 @@ export function CourseForm({ initialData, onClose, selectedCategory, selectedCom
         code: "",
         description: "",
         teacherId: "",
-        category: selectedCategory || "", // Persist selected category/combo for next "add"
+        department: "",
+        category: selectedCategory || "", 
         combination: selectedCombination || ""
       }); 
     }
@@ -187,8 +192,6 @@ export function CourseForm({ initialData, onClose, selectedCategory, selectedCom
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         
-        {/* Category and Combination are usually not directly edited in this form when adding subject to a selection */}
-        {/* They are displayed if editing, or implicitly set if adding */}
         {initialData?.category && (
             <div className="space-y-1">
                 <FormLabel>Category</FormLabel>
@@ -228,6 +231,19 @@ export function CourseForm({ initialData, onClose, selectedCategory, selectedCom
             </FormItem>
           )}
         />
+         <FormField
+          control={form.control}
+          name="department"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Department (Optional)</FormLabel>
+              <FormControl>
+                <Input placeholder="e.g., Science Department" {...field} value={field.value ?? ""} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
         <FormField
           control={form.control}
           name="description"
@@ -239,6 +255,7 @@ export function CourseForm({ initialData, onClose, selectedCategory, selectedCom
                   placeholder="Briefly describe the subject."
                   className="resize-none"
                   {...field}
+                  value={field.value ?? ""}
                 />
               </FormControl>
               <FormMessage />
@@ -300,4 +317,3 @@ export function CourseForm({ initialData, onClose, selectedCategory, selectedCom
     </Form>
   );
 }
-

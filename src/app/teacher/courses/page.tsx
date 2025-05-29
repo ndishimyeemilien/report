@@ -7,10 +7,11 @@ import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
 import { collection, getDocs, query, where, Timestamp, orderBy } from "firebase/firestore";
 import { useEffect, useState } from "react";
-import { BookOpen, Loader2, AlertTriangle, Info } from "lucide-react";
+import { BookOpen, Loader2, AlertTriangle, Info, Briefcase } from "lucide-react"; // Added Briefcase
 import { ScrollArea } from "@/components/ui/scroll-area";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
 export default function TeacherCoursesPage() {
   const { userProfile, loading: authLoading } = useAuth();
@@ -118,6 +119,12 @@ export default function TeacherCoursesPage() {
                           <CardDescription className="pt-1 text-sm">
                             {course.description || "No description provided."}
                           </CardDescription>
+                           {course.department && (
+                            <Badge variant="outline" className="mt-2 text-xs">
+                              <Briefcase className="mr-1.5 h-3 w-3" />
+                              Department: {course.department}
+                            </Badge>
+                          )}
                         </div>
                         <Link href={`/teacher/grades?courseId=${course.id}&courseName=${encodeURIComponent(course.name + ' (' + course.code + ')')}`}>
                           <Button variant="outline">Manage Grades</Button>

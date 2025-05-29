@@ -10,13 +10,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"; // Added SheetHeader, SheetTitle
 import { useAuth } from "@/context/AuthContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Menu, LogOut, UserCircle, Settings, Sun, Moon } from "lucide-react";
 import Link from "next/link";
 import Logo from "../shared/Logo";
-import TeacherSidebarNav from "./TeacherSidebarNav"; // To be created
+import TeacherSidebarNav from "./TeacherSidebarNav"; 
 import { useState, useEffect } from "react";
 
 // Simple theme toggle (can be shared or duplicated)
@@ -70,6 +70,9 @@ export default function TeacherHeader() {
             </Button>
           </SheetTrigger>
           <SheetContent side="left" className="flex flex-col p-0 pt-4 bg-sidebar text-sidebar-foreground">
+            <SheetHeader>
+              <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
+            </SheetHeader>
              <div className="px-4 mb-4">
                 <Logo className="text-sidebar-foreground"/>
              </div>

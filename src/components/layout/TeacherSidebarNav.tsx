@@ -1,10 +1,11 @@
+
 "use client";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { LayoutDashboard, BookOpen, Edit } from "lucide-react"; 
+import { LayoutDashboard, BookOpen, Edit, CheckSquare } from "lucide-react"; 
 
 export interface NavItem {
   href: string;
@@ -18,6 +19,7 @@ export const teacherNavItems: NavItem[] = [
   { href: "/teacher/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/teacher/courses", label: "My Courses", icon: BookOpen }, 
   { href: "/teacher/grades", label: "Enter Grades", icon: Edit },
+  { href: "/teacher/attendance", label: "Attendance", icon: CheckSquare },
 ];
 
 interface TeacherSidebarNavProps {
@@ -33,8 +35,6 @@ export default function TeacherSidebarNav({ isMobile = false }: TeacherSidebarNa
       {navItems.map((item) => {
         const isActive =
           pathname === item.href ||
-          // Check if current path starts with item.href, but exclude dashboard
-          // to prevent it from being active for all its sub-routes if not strictly matching.
           (pathname.startsWith(item.href) && item.href !== "/teacher/dashboard");
 
         const buttonVariant = isActive ? "default" : "ghost";

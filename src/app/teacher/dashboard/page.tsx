@@ -58,6 +58,7 @@ export default function TeacherDashboardPage() {
     { title: "My Assigned Courses", value: stats.assignedCourses.toString(), icon: BookOpen, href: "/teacher/courses", bgColor: "bg-blue-100", textColor: "text-blue-700", iconColor: "text-blue-500" },
     { title: "Enter / View Grades", value: "Manage", icon: Edit, href: "/teacher/grades", bgColor: "bg-green-100", textColor: "text-green-700", iconColor: "text-green-500" },
     { title: "Grades Entered by You", value: stats.gradesEntered.toString(), icon: CheckSquare, href: "/teacher/grades?filter=mine", bgColor: "bg-teal-100", textColor: "text-teal-700", iconColor: "text-teal-500" },
+    { title: "Manage Attendance", value: "Mark", icon: CheckSquare, href: "/teacher/attendance", bgColor: "bg-purple-100", textColor: "text-purple-700", iconColor: "text-purple-500" },
   ];
 
   if (authLoading || isLoading) {
@@ -88,15 +89,15 @@ export default function TeacherDashboardPage() {
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {dashboardItems.map((item) => (
            <Link href={item.href} key={item.title}>
-            <Card className={`hover:shadow-lg transition-shadow duration-200`}>
+            <Card className={'hover:shadow-lg transition-shadow duration-200'}>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">{item.title}</CardTitle>
-                <item.icon className={`h-5 w-5 ${item.iconColor}`} />
+                <item.icon className={cn('h-5 w-5', item.iconColor)} />
               </CardHeader>
               <CardContent>
-                <div className={`text-3xl font-bold ${item.textColor}`}>{item.value}</div>
+                <div className={cn('text-3xl font-bold', item.textColor)}>{item.value}</div>
                 <p className="text-xs text-muted-foreground pt-1">
-                    {item.title === "Enter / View Grades" ? "Go to Grade Management" : "View Details"}
+                    {item.title === "Enter / View Grades" || item.title === "Manage Attendance" ? "Go to Management" : "View Details"}
                 </p>
               </CardContent>
             </Card>
@@ -109,13 +110,14 @@ export default function TeacherDashboardPage() {
           <CardHeader>
             <CardTitle>Welcome, {userProfile?.email || "Teacher"}!</CardTitle>
             <CardDescription>
-              This is your portal to manage grades for your assigned courses.
+              This is your portal to manage grades and attendance for your assigned courses.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
                 <li>View your assigned courses in the "My Courses" section.</li>
                 <li>Enter and update student grades via the "Enter Grades" section.</li>
+                <li>Mark student attendance in the "Attendance" section.</li>
                 <li>Keep track of grades you've entered.</li>
             </ul>
           </CardContent>

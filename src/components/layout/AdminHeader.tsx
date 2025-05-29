@@ -10,10 +10,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"; // Added SheetHeader, SheetTitle
 import { useAuth } from "@/context/AuthContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Menu, LogOut, Settings, Sun, Moon } from "lucide-react"; // Removed UserCircle as Avatar is used
+import { Menu, LogOut, Settings, Sun, Moon } from "lucide-react";
 import Link from "next/link";
 import Logo from "../shared/Logo";
 import AdminSidebarNav from "./AdminSidebarNav"; 
@@ -72,6 +72,9 @@ export default function AdminHeader() {
             </Button>
           </SheetTrigger>
           <SheetContent side="left" className="flex flex-col p-0 pt-4 bg-sidebar text-sidebar-foreground">
+            <SheetHeader>
+              <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
+            </SheetHeader>
              <div className="px-4 mb-4">
                 <Logo className="text-sidebar-foreground"/>
              </div>
@@ -111,7 +114,7 @@ export default function AdminHeader() {
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
-                <Link href="/admin/settings"> {/* Updated Link */}
+                <Link href="/admin/settings">
                   <Settings className="mr-2 h-4 w-4" />
                   <span>Settings</span>
                 </Link>

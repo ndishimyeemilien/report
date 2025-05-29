@@ -2,22 +2,29 @@
 "use client";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { BookOpen, ClipboardList, Users, BarChart3, UsersRound, UserCog, Percent, ListChecks, Loader2, Users2, Archive } from "lucide-react"; 
+import { BookOpen, ClipboardList, Users, BarChart3, UsersRound, UserCog, Percent, ListChecks, Loader2, Users2, Archive, CalendarClock, Group, MessageSquare, PersonStanding, VenetianMask } from "lucide-react";
 import Link from "next/link";
 import { collection, getDocs, query, where, Timestamp, orderBy, limit } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import type { Grade } from "@/types"; 
+import type { Grade, Student } from "@/types";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { useTranslation } from 'react-i18next';
+import { cn } from "@/lib/utils";
 
 interface DashboardStats {
   totalCourses: number;
-  totalClasses: number; // Added for classes
+  totalClasses: number;
+  totalAcademicTerms: number;
+  totalTeacherGroups: number;
   totalGrades: number;
   overallPassRate: number;
   totalTeachers: number;
   totalStudents: number;
+  totalMaleStudents: number;
+  totalFemaleStudents: number;
+  totalOtherGenderStudents: number;
   totalEnrollments: number;
   totalRegisteredUsers: number;
   recentGrades: Grade[];
@@ -26,13 +33,20 @@ interface DashboardStats {
 }
 
 export default function DashboardPage() {
+  const { t } = useTranslation();
+  console.log("Admin Dashboard page rendered"); // Benign console log added
   const [statsData, setStatsData] = useState<DashboardStats>({
     totalCourses: 0,
-    totalClasses: 0, // Initialize
+    totalClasses: 0,
+    totalAcademicTerms: 0,
+    totalTeacherGroups: 0,
     totalGrades: 0,
     overallPassRate: 0,
     totalTeachers: 0,
     totalStudents: 0,
+    totalMaleStudents: 0,
+    totalFemaleStudents: 0,
+    totalOtherGenderStudents: 0,
     totalEnrollments: 0,
     totalRegisteredUsers: 0,
     recentGrades: [],
@@ -45,7 +59,9 @@ export default function DashboardPage() {
       setStatsData(prev => ({ ...prev, loading: true, error: null }));
       try {
         const coursesSnapshot = await getDocs(collection(db, "courses"));
-        const classesSnapshot = await getDocs(collection(db, "classes")); // Fetch classes
+        const classesSnapshot = await getDocs(collection(db, "classes"));
+        const termsSnapshot = await getDocs(collection(db, "academicTerms"));
+        const groupsSnapshot = await getDocs(collection(db, "teacherGroups"));
         const gradesSnapshot = await getDocs(collection(db, "grades"));
         const studentsSnapshot = await getDocs(collection(db, "students"));
         const enrollmentsSnapshot = await getDocs(collection(db, "enrollments"));
@@ -71,14 +87,30 @@ export default function DashboardPage() {
           }
         });
         const overallPassRate = gradesSnapshot.size > 0 ? (totalPasses / gradesSnapshot.size) * 100 : 0;
+        
+        let maleStudents = 0;
+        let femaleStudents = 0;
+        let otherGenderStudents = 0;
+        studentsSnapshot.forEach(doc => {
+          const studentData = doc.data() as Student;
+          if (studentData.gender === 'Male') maleStudents++;
+          else if (studentData.gender === 'Female') femaleStudents++;
+          else if (studentData.gender === 'Other') otherGenderStudents++;
+        });
+
 
         setStatsData({
           totalCourses: coursesSnapshot.size,
-          totalClasses: classesSnapshot.size, // Set total classes
+          totalClasses: classesSnapshot.size,
+          totalAcademicTerms: termsSnapshot.size,
+          totalTeacherGroups: groupsSnapshot.size,
           totalGrades: gradesSnapshot.size,
           overallPassRate: overallPassRate,
           totalTeachers: teachersSnapshot.size,
           totalStudents: studentsSnapshot.size,
+          totalMaleStudents: maleStudents,
+          totalFemaleStudents: femaleStudents,
+          totalOtherGenderStudents: otherGenderStudents,
           totalEnrollments: enrollmentsSnapshot.size,
           totalRegisteredUsers: allUsersSnapshot.size,
           recentGrades,
@@ -89,11 +121,16 @@ export default function DashboardPage() {
         console.error("Error fetching dashboard stats:", error);
         setStatsData({
           totalCourses: 0,
-          totalClasses: 0, // Reset
+          totalClasses: 0,
+          totalAcademicTerms: 0,
+          totalTeacherGroups: 0,
           totalGrades: 0,
           overallPassRate: 0,
           totalTeachers: 0,
           totalStudents: 0,
+          totalMaleStudents: 0,
+          totalFemaleStudents: 0,
+          totalOtherGenderStudents: 0,
           totalEnrollments: 0,
           totalRegisteredUsers: 0,
           recentGrades: [],
@@ -105,17 +142,29 @@ export default function DashboardPage() {
     getStats();
   }, []);
 
-  const { totalCourses, totalClasses, totalGrades, overallPassRate, totalTeachers, totalStudents, totalEnrollments, totalRegisteredUsers, recentGrades, error: statsError, loading: statsLoading } = statsData;
+  const {
+    totalCourses, totalClasses, totalAcademicTerms, totalTeacherGroups,
+    totalGrades, overallPassRate, totalTeachers, totalStudents,
+    totalMaleStudents, totalFemaleStudents, totalOtherGenderStudents,
+    totalEnrollments, totalRegisteredUsers, recentGrades,
+    error: statsError, loading: statsLoading
+  } = statsData;
 
   const statsCards = [
-    { title: "Total Subjects", value: totalCourses.toString(), icon: BookOpen, href: "/admin/dashboard/courses", iconColor: "text-blue-500" }, 
+    { title: "Total Subjects", value: totalCourses.toString(), icon: BookOpen, href: "/admin/dashboard/courses", iconColor: "text-blue-500" },
     { title: "Total Classes", value: totalClasses.toString(), icon: Archive, href: "/admin/dashboard/classes", iconColor: "text-orange-400" },
+    { title: "Academic Terms", value: totalAcademicTerms.toString(), icon: CalendarClock, href: "/admin/dashboard/terms", iconColor: "text-lime-500" },
+    { title: "Teacher Groups", value: totalTeacherGroups.toString(), icon: Group, href: "/admin/dashboard/groups", iconColor: "text-cyan-500" },
     { title: "Grades Recorded", value: totalGrades.toString(), icon: ClipboardList, href: "/admin/dashboard/grades", iconColor: "text-green-500" },
-    { title: "Overall Pass Rate", value: overallPassRate.toFixed(1) + "%", icon: Percent, href: "/admin/dashboard/reports", iconColor: "text-teal-500" }, 
+    { title: "Overall Pass Rate", value: overallPassRate.toFixed(1) + "%", icon: Percent, href: "/admin/dashboard/reports", iconColor: "text-teal-500" },
+    { title: "View Feedback", value: "Messages", icon: MessageSquare, href: "/admin/dashboard/feedback", iconColor: "text-purple-500" },
     { title: "Total Registered Users", value: totalRegisteredUsers.toString(), icon: Users2, href: "/admin/dashboard/users", iconColor: "text-sky-500" },
-    { title: "Total Teachers", value: totalTeachers.toString(), icon: UserCog, href: "/admin/dashboard/teachers", iconColor: "text-orange-500" }, 
-    { title: "Total Students", value: totalStudents.toString(), icon: Users, href: "/secretary/students", iconColor: "text-purple-500" }, 
-    { title: "Total Enrollments", value: totalEnrollments.toString(), icon: UsersRound, href: "/secretary/enrollments", iconColor: "text-indigo-500" }, 
+    { title: "Total Teachers", value: totalTeachers.toString(), icon: UserCog, href: "/admin/dashboard/teachers", iconColor: "text-orange-500" },
+    { title: "Total Students", value: totalStudents.toString(), icon: Users, href: "/secretary/students", iconColor: "text-purple-500" },
+    { title: "Male Students", value: totalMaleStudents.toString(), icon: PersonStanding, href: "/secretary/students", iconColor: "text-blue-400" },
+    { title: "Female Students", value: totalFemaleStudents.toString(), icon: VenetianMask, href: "/secretary/students", iconColor: "text-pink-400" },
+    { title: "Other Gender Students", value: totalOtherGenderStudents.toString(), icon: Users, href: "/secretary/students", iconColor: "text-gray-400" },
+    { title: "Total Enrollments", value: totalEnrollments.toString(), icon: UsersRound, href: "/secretary/enrollments", iconColor: "text-indigo-500" },
     { title: "View Reports", value: "Analytics", icon: BarChart3, href: "/admin/dashboard/reports", iconColor: "text-yellow-500" },
   ];
 
@@ -135,7 +184,7 @@ export default function DashboardPage() {
 
   return (
     <div className="container mx-auto py-8">
-      <h1 className="mb-8 text-3xl font-bold tracking-tight text-foreground">Admin Dashboard</h1>
+      <h1 className="mb-8 text-3xl font-bold tracking-tight text-foreground">{t('adminDashboardTitle')}</h1>
       
       {statsError && (
         <Card className="mb-6 bg-destructive/10 border-destructive">
@@ -149,17 +198,17 @@ export default function DashboardPage() {
         </Card>
       )}
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"> 
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {statsCards.map((stat) => (
            <Link href={stat.href} key={stat.title}>
-            <Card className={`hover:shadow-lg transition-shadow duration-200`}>
+            <Card className={cn('hover:shadow-lg transition-shadow duration-200', stat.title === "View Feedback" ? "bg-purple-50 dark:bg-purple-900/30" : "")}>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">{stat.title}</CardTitle>
-                <stat.icon className={`h-5 w-5 ${stat.iconColor}`} />
+                <stat.icon className={cn("h-5 w-5", stat.iconColor)} />
               </CardHeader>
               <CardContent>
-                <div className={`text-3xl font-bold`}>{stat.value}</div>
-                <p className="text-xs text-muted-foreground pt-1">{stat.title === "View Reports" ? "Go to Reports" : "View Details"}</p>
+                <div className={cn("text-3xl font-bold")}>{stat.value}</div>
+                <p className="text-xs text-muted-foreground pt-1">{stat.title === "View Reports" || stat.title === "View Feedback" ? "Go to Page" : "View Details"}</p>
               </CardContent>
             </Card>
           </Link>
@@ -171,7 +220,7 @@ export default function DashboardPage() {
           <CardHeader>
             <CardTitle>Welcome to Report-Manager Lite!</CardTitle>
             <CardDescription>
-              This is your central hub for managing subjects (grouped by category/combination), student grades, viewing reports, and overseeing student and enrollment data.
+              This is your central hub for managing subjects, classes, academic terms, teacher groups, student grades, user feedback, viewing reports, and overseeing user accounts.
               Use the navigation sidebar to access different modules.
             </CardDescription>
           </CardHeader>
@@ -180,10 +229,13 @@ export default function DashboardPage() {
                 <div className="rounded-lg border bg-card p-6 shadow-sm">
                     <h3 className="text-lg font-semibold mb-2 text-primary">Key Admin Functions</h3>
                     <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
-                        <li><Link href="/admin/dashboard/courses" className="hover:underline text-accent">Manage subjects</Link> (add to categories/combinations, assign teachers).</li>
+                        <li><Link href="/admin/dashboard/courses" className="hover:underline text-accent">Manage subjects</Link>.</li>
                         <li><Link href="/admin/dashboard/classes" className="hover:underline text-accent">Manage classes</Link>.</li>
-                        <li><Link href="/admin/dashboard/grades" className="hover:underline text-accent">View and manage all student grades</Link> (override if necessary).</li>
+                        <li><Link href="/admin/dashboard/terms" className="hover:underline text-accent">Manage academic terms</Link>.</li>
+                        <li><Link href="/admin/dashboard/groups" className="hover:underline text-accent">Manage teacher groups</Link>.</li>
+                        <li><Link href="/admin/dashboard/grades" className="hover:underline text-accent">View and manage all student grades</Link>.</li>
                         <li><Link href="/admin/dashboard/reports" className="hover:underline text-accent">Access comprehensive academic reports</Link>.</li>
+                        <li><Link href="/admin/dashboard/feedback" className="hover:underline text-accent">View user feedback</Link>.</li>
                         <li>Oversee student records (via <Link href="/secretary/students" className="hover:underline text-accent">Students</Link>) and enrollments (via <Link href="/secretary/enrollments" className="hover:underline text-accent">Enrollments</Link>).</li>
                         <li><Link href="/admin/dashboard/teachers" className="hover:underline text-accent">Manage Teacher accounts</Link>.</li>
                         <li><Link href="/admin/dashboard/users" className="hover:underline text-accent">View all registered users</Link>.</li>
@@ -192,10 +244,11 @@ export default function DashboardPage() {
                  <div className="rounded-lg border bg-card p-6 shadow-sm">
                     <h3 className="text-lg font-semibold mb-2 text-accent">System Workflow</h3>
                      <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
-                        <li>Admins define subjects within categories/combinations and assign teachers.</li>
+                        <li>Admins define subjects, academic terms, and teacher groups.</li>
                         <li>Secretaries register students, assign them to classes, and enroll them.</li>
-                        <li>Teachers enter grades for students in their assigned subjects.</li>
-                        <li>Admins monitor overall academic performance via reports.</li>
+                        <li>Teachers enter grades for students in their assigned subjects for specific terms.</li>
+                        <li>Admins monitor overall academic performance via reports and manage user access.</li>
+                        <li>Users can submit feedback for system improvement.</li>
                     </ul>
                 </div>
             </div>
@@ -209,7 +262,7 @@ export default function DashboardPage() {
                     <ul className="space-y-2">
                     {recentGrades.map((grade) => (
                         <li key={grade.id} className="text-sm text-muted-foreground p-2 rounded-md hover:bg-muted/50 transition-colors">
-                        <span className="font-medium text-foreground">{grade.studentName}</span> - {grade.courseName}: <span className="font-semibold text-primary">{grade.marks}</span>
+                        <span className="font-medium text-foreground">{grade.studentName}</span> - {grade.courseName}: <span className="font-semibold text-primary">{grade.totalMarks ?? grade.marks}</span>
                         <span className="text-xs block text-muted-foreground/80">On: {formatDate(grade.createdAt)} by {grade.enteredByTeacherEmail?.split('@')[0] || 'System'}</span>
                         </li>
                     ))}

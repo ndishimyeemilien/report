@@ -2,15 +2,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { collection, getDocs, query, orderBy, Timestamp, where, doc, getDoc } from "firebase/firestore"; // Added doc, getDoc
+import { collection, getDocs, query, orderBy, Timestamp, where, doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import type { Course, Grade, Student, Enrollment, SystemSettings } from "@/types"; // Course now means Subject
+import type { Course, Grade, Student, Enrollment, SystemSettings } from "@/types"; 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from "@/components/ui/chart";
 import { BarChart as RechartsBarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip as RechartsTooltip, Legend as RechartsLegend } from "recharts";
-import { Loader2, AlertTriangle, BarChart3, Percent, CheckCircle, XCircle, TrendingUp, TrendingDown, ListChecks, FileSpreadsheet, Users, BookOpen, Download, UserSquare2, ExternalLink } from "lucide-react";
+import { Loader2, AlertTriangle, BarChart3, Percent, CheckCircle, XCircle, TrendingUp, TrendingDown, ListChecks, FileSpreadsheet, Users, BookOpen, Download, UserSquare2, ExternalLink, Archive } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -23,12 +23,12 @@ interface SubjectPerformanceData {
   combination: string;
   totalStudentsEnrolled: number;
   totalStudentsGradedInSubject: number;
-  averageMarks: number | null;
+  averageMarks: number | null; // Will be average of totalMarks
   passCount: number;
   failCount: number;
   passRate: number | null;
-  highestMark: number | null;
-  lowestMark: number | null;
+  highestMark: number | null; // Highest totalMarks
+  lowestMark: number | null; // Lowest totalMarks
   teacherName?: string;
 }
 
@@ -38,32 +38,46 @@ interface StudentPerformanceData {
   studentSystemId?: string;
   className?: string;
   numberOfSubjectsGraded: number;
-  totalMarksObtained: number;
-  averageMarks: number | null;
+  totalMarksObtainedSum: number; // Sum of totalMarks across subjects
+  averageMarks: number | null; // Average of totalMarks
 }
+
+interface ClassPerformanceData {
+  classId: string;
+  className: string;
+  totalStudentsInClass: number;
+  studentsWithGrades: number;
+  classAverageMark: number | null;
+  studentsPassing: number;
+  studentsFailing: number;
+  classPassRate: number | null;
+}
+
 
 interface ReportData {
   overallStats: {
     totalStudentsGraded: number;
     totalGradeEntries: number;
-    averageMarks: number | null;
+    averageMarks: number | null; // Average of totalMarks
     passRate: number | null;
     failRate: number | null;
-    highestMark: number | null;
-    lowestMark: number | null;
+    highestMark: number | null; // Highest totalMarks
+    lowestMark: number | null; // Lowest totalMarks
     totalRegisteredStudents: number;
   };
   subjectPerformance: SubjectPerformanceData[];
   studentPerformance: StudentPerformanceData[];
+  classPerformance: ClassPerformanceData[];
   marksDistribution: Array<{
     range: string;
     count: number;
   }>;
   totalSubjects: number;
+  totalClasses: number;
   systemSettings: SystemSettings | null;
 }
 
-const PASS_MARK = 50;
+const PASS_MARK = 50; // Assuming total marks are out of 100
 
 // CSV export function for subject performance
 const exportSubjectPerformanceToCSV = (subjectPerformanceData: SubjectPerformanceData[]) => {
@@ -139,6 +153,37 @@ const exportStudentPerformanceToCSV = (studentPerformanceData: StudentPerformanc
   document.body.removeChild(link);
 };
 
+const exportClassPerformanceToCSV = (classPerformanceData: ClassPerformanceData[]) => {
+  if (classPerformanceData.length === 0) {
+    alert("No class performance data to export.");
+    return;
+  }
+  const headers = [
+    "Class Name", "Total Students", "Students Graded", "Class Average Mark (%)",
+    "Students Passing", "Students Failing", "Class Pass Rate (%)"
+  ];
+  const rows = classPerformanceData.map(cp => [
+    cp.className,
+    cp.totalStudentsInClass,
+    cp.studentsWithGrades,
+    cp.classAverageMark !== null ? cp.classAverageMark.toFixed(1) : "N/A",
+    cp.studentsPassing,
+    cp.studentsFailing,
+    cp.classPassRate !== null ? cp.classPassRate.toFixed(1) : "N/A",
+  ]);
+  let csvContent = "data:text/csv;charset=utf-8,"
+    + headers.join(",") + "\n"
+    + rows.map(e => e.map(field => `"${String(field).replace(/"/g, '""')}"`).join(",")).join("\n");
+
+  const encodedUri = encodeURI(csvContent);
+  const link = document.createElement("a");
+  link.setAttribute("href", encodedUri);
+  link.setAttribute("download", "class_performance_report.csv");
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+};
+
 
 export default function ReportsPage() {
   const [reportData, setReportData] = useState<ReportData | null>(null);
@@ -153,32 +198,35 @@ export default function ReportsPage() {
       const gradesQuery = query(collection(db, "grades"));
       const studentsQuery = query(collection(db, "students"), orderBy("fullName"));
       const enrollmentsQuery = query(collection(db, "enrollments"));
+      const classesQuery = query(collection(db, "classes"), orderBy("name"));
       const settingsRef = doc(db, "systemSettings", "generalConfig");
 
 
-      const [subjectsSnapshot, gradesSnapshot, studentsSnapshot, enrollmentsSnapshot, settingsSnap] = await Promise.all([
+      const [subjectsSnapshot, gradesSnapshot, studentsSnapshot, enrollmentsSnapshot, classesSnapshot, settingsSnap] = await Promise.all([
         getDocs(subjectsQuery),
         getDocs(gradesQuery),
         getDocs(studentsQuery),
         getDocs(enrollmentsQuery),
+        getDocs(classesQuery),
         getDoc(settingsRef),
       ]);
 
-      const subjects = subjectsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Course));
-      const grades = gradesSnapshot.docs.map(doc => {
-        const data = doc.data();
+      const subjects = subjectsSnapshot.docs.map(d => ({ id: d.id, ...d.data() } as Course));
+      const grades = gradesSnapshot.docs.map(d => {
+        const data = d.data();
         return {
-          id: doc.id,
+          id: d.id,
           ...data,
           createdAt: (data.createdAt as Timestamp)?.toDate(),
           updatedAt: (data.updatedAt as Timestamp)?.toDate(),
         } as Grade;
       });
-      const students = studentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data()} as Student));
-      const enrollments = enrollmentsSnapshot.docs.map(doc => ({id: doc.id, ...doc.data()} as Enrollment));
+      const students = studentsSnapshot.docs.map(d => ({ id: d.id, ...d.data()} as Student));
+      const enrollments = enrollmentsSnapshot.docs.map(d => ({id: d.id, ...d.data()} as Enrollment));
+      const classes = classesSnapshot.docs.map(d => ({id: d.id, ...d.data()} as Class));
       const systemSettingsData = settingsSnap.exists() ? settingsSnap.data() as SystemSettings : null;
 
-      generateReportData(subjects, grades, students, enrollments, systemSettingsData);
+      generateReportData(subjects, grades, students, enrollments, classes, systemSettingsData);
 
     } catch (err: any) {
       console.error("Error fetching report data:", err);
@@ -193,8 +241,8 @@ export default function ReportsPage() {
     fetchAndProcessData();
   }, []);
 
-  const generateReportData = (subjects: Course[], grades: Grade[], students: Student[], enrollments: Enrollment[], systemSettings: SystemSettings | null) => {
-    let totalMarksOverall = 0;
+  const generateReportData = (subjects: Course[], grades: Grade[], students: Student[], enrollments: Enrollment[], classes: Class[], systemSettings: SystemSettings | null) => {
+    let totalMarksSumOverall = 0;
     let passCountOverall = 0;
     let highestMarkOverall: number | null = null;
     let lowestMarkOverall: number | null = null;
@@ -202,14 +250,15 @@ export default function ReportsPage() {
 
     if (grades.length > 0) {
       grades.forEach(grade => {
-        totalMarksOverall += grade.marks;
+        const currentMark = grade.totalMarks ?? 0;
+        totalMarksSumOverall += currentMark;
         if (grade.status === 'Pass') passCountOverall++;
-        if (highestMarkOverall === null || grade.marks > highestMarkOverall) highestMarkOverall = grade.marks;
-        if (lowestMarkOverall === null || grade.marks < lowestMarkOverall) lowestMarkOverall = grade.marks;
+        if (highestMarkOverall === null || currentMark > highestMarkOverall) highestMarkOverall = currentMark;
+        if (lowestMarkOverall === null || currentMark < lowestMarkOverall) lowestMarkOverall = currentMark;
       });
     }
 
-    const averageMarksOverall = grades.length > 0 ? totalMarksOverall / grades.length : null;
+    const averageMarksOverall = grades.length > 0 ? totalMarksSumOverall / grades.length : null;
     const passRateOverall = grades.length > 0 ? (passCountOverall / grades.length) * 100 : null;
     const failRateOverall = grades.length > 0 && passRateOverall !== null ? 100 - passRateOverall : null;
 
@@ -220,17 +269,18 @@ export default function ReportsPage() {
       const subjectEnrollments = enrollments.filter(e => e.courseId === subject.id);
       const uniqueStudentIdsEnrolledInSubject = new Set(subjectEnrollments.map(e => e.studentId));
 
-      let subjectTotalMarks = 0;
+      let subjectTotalMarksSum = 0;
       let subjectPassCount = 0;
       let subjectHighestMark: number | null = null;
       let subjectLowestMark: number | null = null;
 
       if (subjectGrades.length > 0) {
           subjectGrades.forEach(grade => {
-            subjectTotalMarks += grade.marks;
+            const currentMark = grade.totalMarks ?? 0;
+            subjectTotalMarksSum += currentMark;
             if (grade.status === 'Pass') subjectPassCount++;
-            if (subjectHighestMark === null || grade.marks > subjectHighestMark) subjectHighestMark = grade.marks;
-            if (subjectLowestMark === null || grade.marks < subjectLowestMark) subjectLowestMark = grade.marks;
+            if (subjectHighestMark === null || currentMark > subjectHighestMark) subjectHighestMark = currentMark;
+            if (subjectLowestMark === null || currentMark < subjectLowestMark) subjectLowestMark = currentMark;
           });
       }
 
@@ -243,7 +293,7 @@ export default function ReportsPage() {
         teacherName: subject.teacherName,
         totalStudentsEnrolled: uniqueStudentIdsEnrolledInSubject.size,
         totalStudentsGradedInSubject: uniqueStudentIdsGradedInSubject.size,
-        averageMarks: subjectGrades.length > 0 ? subjectTotalMarks / subjectGrades.length : null,
+        averageMarks: subjectGrades.length > 0 ? subjectTotalMarksSum / subjectGrades.length : null,
         passCount: subjectPassCount,
         failCount: subjectGrades.length - subjectPassCount,
         passRate: subjectGrades.length > 0 ? (subjectPassCount / subjectGrades.length) * 100 : null,
@@ -255,8 +305,8 @@ export default function ReportsPage() {
     const studentPerformance: StudentPerformanceData[] = students.map(student => {
       const studentGrades = grades.filter(grade => grade.studentId === student.id);
       const numberOfSubjectsGraded = studentGrades.length;
-      const totalMarksObtained = studentGrades.reduce((sum, grade) => sum + grade.marks, 0);
-      const averageMarks = numberOfSubjectsGraded > 0 ? totalMarksObtained / numberOfSubjectsGraded : null;
+      const totalMarksObtainedSum = studentGrades.reduce((sum, grade) => sum + (grade.totalMarks ?? 0), 0);
+      const averageMarks = numberOfSubjectsGraded > 0 ? totalMarksObtainedSum / numberOfSubjectsGraded : null;
 
       return {
         studentId: student.id,
@@ -264,9 +314,42 @@ export default function ReportsPage() {
         studentSystemId: student.studentSystemId,
         className: student.className,
         numberOfSubjectsGraded,
-        totalMarksObtained,
+        totalMarksObtainedSum,
         averageMarks,
       };
+    });
+
+    const classPerformance: ClassPerformanceData[] = classes.map(cls => {
+        const studentsInThisClass = students.filter(s => s.classId === cls.id);
+        const studentIdsInThisClass = studentsInThisClass.map(s => s.id);
+        
+        let studentsWithGradesCount = 0;
+        let classTotalAverageSum = 0;
+        let studentsPassing = 0;
+        let studentsFailing = 0;
+
+        studentPerformance.filter(sp => studentIdsInThisClass.includes(sp.studentId)).forEach(sp => {
+            if (sp.numberOfSubjectsGraded > 0 && sp.averageMarks !== null) {
+                studentsWithGradesCount++;
+                classTotalAverageSum += sp.averageMarks;
+                if (sp.averageMarks >= PASS_MARK) {
+                    studentsPassing++;
+                } else {
+                    studentsFailing++;
+                }
+            }
+        });
+        
+        return {
+            classId: cls.id,
+            className: cls.name,
+            totalStudentsInClass: studentsInThisClass.length,
+            studentsWithGrades: studentsWithGradesCount,
+            classAverageMark: studentsWithGradesCount > 0 ? classTotalAverageSum / studentsWithGradesCount : null,
+            studentsPassing,
+            studentsFailing,
+            classPassRate: studentsWithGradesCount > 0 ? (studentsPassing / studentsWithGradesCount) * 100 : null,
+        };
     });
 
 
@@ -276,7 +359,7 @@ export default function ReportsPage() {
     }));
 
     grades.forEach(grade => {
-      const mark = grade.marks;
+      const mark = grade.totalMarks ?? 0; // Use totalMarks
       let rangeIndex;
       if (mark <= 10) rangeIndex = 0;
       else if (mark <= 20) rangeIndex = 1;
@@ -307,8 +390,10 @@ export default function ReportsPage() {
       },
       subjectPerformance,
       studentPerformance,
+      classPerformance,
       marksDistribution,
       totalSubjects: subjects.length,
+      totalClasses: classes.length,
       systemSettings,
     });
   };
@@ -382,7 +467,7 @@ export default function ReportsPage() {
     );
   }
 
-  const { overallStats, subjectPerformance, studentPerformance, marksDistribution } = reportData;
+  const { overallStats, subjectPerformance, studentPerformance, classPerformance, marksDistribution } = reportData;
 
 
   return (
@@ -405,6 +490,14 @@ export default function ReportsPage() {
             className="w-full sm:w-auto"
           >
             <Download className="mr-2 h-5 w-5" /> Export Student Performance
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => exportClassPerformanceToCSV(reportData.classPerformance)}
+            disabled={reportData.classPerformance.length === 0 || isLoading}
+            className="w-full sm:w-auto"
+          >
+            <Download className="mr-2 h-5 w-5" /> Export Class Performance
           </Button>
         </div>
       </div>
@@ -439,6 +532,13 @@ export default function ReportsPage() {
             <div>
               <p className="text-sm font-medium text-muted-foreground">Total Subjects Defined</p>
               <p className="text-2xl font-bold">{reportData.totalSubjects}</p>
+            </div>
+          </div>
+          <div className="flex items-center space-x-3 rounded-md border p-4 bg-card hover:shadow-md transition-shadow">
+            <Archive className="h-8 w-8 text-orange-400" />
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Total Classes Defined</p>
+              <p className="text-2xl font-bold">{reportData.totalClasses}</p>
             </div>
           </div>
           <div className="flex items-center space-x-3 rounded-md border p-4 bg-card hover:shadow-md transition-shadow">
@@ -503,8 +603,8 @@ export default function ReportsPage() {
       {overallStats.totalGradeEntries > 0 && (
         <Card className="shadow-lg">
             <CardHeader>
-            <CardTitle className="text-xl text-primary">Marks Distribution</CardTitle>
-            <CardDescription>Distribution of all student marks across different ranges (0-100).</CardDescription>
+            <CardTitle className="text-xl text-primary">Marks Distribution (Based on Total Marks)</CardTitle>
+            <CardDescription>Distribution of all student total marks across different ranges (0-100).</CardDescription>
             </CardHeader>
             <CardContent>
             <ChartContainer config={chartConfig} className="h-[300px] w-full">
@@ -522,6 +622,64 @@ export default function ReportsPage() {
             </CardContent>
         </Card>
       )}
+
+      <Card className="shadow-lg">
+        <CardHeader>
+          <CardTitle className="text-xl text-primary flex items-center gap-2">
+            <Archive className="h-6 w-6"/>
+            Class Performance Summary
+          </CardTitle>
+          <CardDescription>Overview of academic performance for each class.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ScrollArea className="h-[calc(100vh-25rem)] md:h-auto md:max-h-[60vh]">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="min-w-[150px]">Class Name</TableHead>
+                  <TableHead className="text-center">Total Students</TableHead>
+                  <TableHead className="text-center">Graded Students</TableHead>
+                  <TableHead className="text-center">Class Avg. Mark</TableHead>
+                  <TableHead className="text-center">Passing</TableHead>
+                  <TableHead className="text-center">Failing</TableHead>
+                  <TableHead className="text-center">Pass Rate</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {classPerformance.length > 0 ? classPerformance.map(cls => (
+                  <TableRow key={cls.classId}>
+                    <TableCell className="font-medium">{cls.className}</TableCell>
+                    <TableCell className="text-center">{cls.totalStudentsInClass}</TableCell>
+                    <TableCell className="text-center">{cls.studentsWithGrades}</TableCell>
+                    <TableCell className="text-center">{formatNumber(cls.classAverageMark)}%</TableCell>
+                    <TableCell className="text-center text-green-600">{cls.studentsPassing}</TableCell>
+                    <TableCell className="text-center text-red-600">{cls.studentsFailing}</TableCell>
+                    <TableCell className="text-center">
+                       {cls.classPassRate !== null ? (
+                        <Badge variant={cls.studentsWithGrades === 0 ? 'secondary' : (cls.classPassRate >= PASS_MARK ? 'default' : 'destructive')}
+                               className={
+                                cls.studentsWithGrades === 0 ? 'bg-muted text-muted-foreground hover:bg-muted' :
+                                (cls.classPassRate >= PASS_MARK ? 'bg-green-500 hover:bg-green-600'
+                                : 'bg-red-500 hover:bg-red-600')
+                               }>
+                            {cls.studentsWithGrades === 0 ? 'N/A' : `${formatNumber(cls.classPassRate)}%`}
+                        </Badge>
+                       ) : 'N/A'}
+                    </TableCell>
+                  </TableRow>
+                )) : (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                      No classes defined or no student data available for class reports.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </ScrollArea>
+        </CardContent>
+      </Card>
+
 
       <Card className="shadow-lg">
         <CardHeader>
@@ -656,4 +814,3 @@ export default function ReportsPage() {
     </div>
   );
 }
-

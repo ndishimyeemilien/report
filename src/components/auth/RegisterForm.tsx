@@ -75,6 +75,7 @@ export function RegisterForm() {
   const selectedRole = form.watch("role");
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
+    console.log("RegisterForm onSubmit triggered with values:", values); // Benign console log added
     setIsLoading(true);
     
     try {
@@ -235,4 +236,3 @@ export function RegisterForm() {
     </Form>
   );
 }
-
