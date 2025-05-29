@@ -24,6 +24,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useState } from "react";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 const ADMIN_SECRET_CODE = "0784280330"; 
 
@@ -55,6 +56,7 @@ const formSchema = z.object({
 });
 
 export function RegisterForm() {
+  const { t } = useTranslation();
   const { toast } = useToast();
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
@@ -95,7 +97,6 @@ export function RegisterForm() {
       });
       router.push("/login");
     } catch (error: any) {
-      console.error("Registration error:", error);
       let errorMessage = "An unexpected error occurred. Please try again.";
       if (error.code === 'auth/email-already-in-use') {
         errorMessage = "This email address is already in use by another account.";
@@ -120,7 +121,7 @@ export function RegisterForm() {
           name="email"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Email</FormLabel>
+              <FormLabel>{t('emailLabel')}</FormLabel>
               <FormControl>
                 <Input placeholder="user@example.com" {...field} />
               </FormControl>
@@ -133,7 +134,7 @@ export function RegisterForm() {
           name="password"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Password</FormLabel>
+              <FormLabel>{t('passwordLabel')}</FormLabel>
               <FormControl>
                  <div className="relative">
                   <Input 
@@ -161,7 +162,7 @@ export function RegisterForm() {
           name="confirmPassword"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Confirm Password</FormLabel>
+              <FormLabel>{t('confirmPasswordLabel')}</FormLabel>
               <FormControl>
                 <div className="relative">
                     <Input 
@@ -189,17 +190,17 @@ export function RegisterForm() {
           name="role"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Role</FormLabel>
+              <FormLabel>{t('roleLabel')}</FormLabel>
               <Select onValueChange={field.onChange} defaultValue={field.value}>
                 <FormControl>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select a role" />
+                    <SelectValue placeholder={t('selectRolePlaceholder')} />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value="Admin">Admin</SelectItem>
-                  <SelectItem value="Teacher">Teacher</SelectItem>
-                  <SelectItem value="Secretary">Secretary</SelectItem>
+                  <SelectItem value="Admin">{t('adminRole')}</SelectItem>
+                  <SelectItem value="Teacher">{t('teacherRole')}</SelectItem>
+                  <SelectItem value="Secretary">{t('secretaryRole')}</SelectItem>
                 </SelectContent>
               </Select>
               <FormMessage />
@@ -212,9 +213,9 @@ export function RegisterForm() {
             name="adminSecret"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Admin Secret Code</FormLabel>
+                <FormLabel>{t('adminSecretLabel')}</FormLabel>
                 <FormControl>
-                  <Input type="password" placeholder="Enter secret code for Admin" {...field} />
+                  <Input type="password" placeholder={t('adminSecretPlaceholder')} {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -223,19 +224,15 @@ export function RegisterForm() {
         )}
         <Button type="submit" className="w-full" disabled={isLoading}>
           {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          Register
+          {t('registerButton')}
         </Button>
          <p className="text-center text-sm text-muted-foreground">
-          Already have an account?{" "}
+          {t('alreadyHaveAccount')}{" "}
           <Link href="/login" className="font-medium text-primary hover:underline">
-            Login here
+            {t('loginHereLink')}
           </Link>
         </p>
       </form>
     </Form>
   );
 }
-<<<<<<< HEAD
-
-=======
->>>>>>> 5dbc128 (mjhh)

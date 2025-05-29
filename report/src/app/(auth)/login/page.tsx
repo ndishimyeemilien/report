@@ -1,14 +1,18 @@
+
+"use client";
 import { LoginForm } from "@/components/auth/LoginForm";
 import { CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import Link from "next/link";
+import { useTranslation } from "react-i18next";
 
 export default function LoginPage() {
+  const { t } = useTranslation();
   return (
     <>
       <CardHeader className="text-center">
-        <CardTitle className="text-2xl">Admin Login</CardTitle>
+        <CardTitle className="text-2xl">{t('loginTitle')}</CardTitle>
         <CardDescription>
-          Enter your credentials to access the admin panel.
+          {t('loginDescription')}
         </CardDescription>
       </CardHeader>
       <LoginForm />
@@ -17,7 +21,7 @@ export default function LoginPage() {
           href="/forgot-password"
           className="underline underline-offset-4 hover:text-primary"
         >
-          Forgot password?
+          {t('forgotPasswordLink')}
         </Link>
       </p>
     </>

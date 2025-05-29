@@ -137,11 +137,10 @@ export default function AdminSettingsPage() {
           </CardContent>
         </Card>
         
-        {/* Language Switcher is now in headers, removing from here
         <Card className="lg:col-span-3">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Languages className="h-5 w-5 text-primary" /> 
+               <BookCopy className="h-5 w-5 text-primary" /> 
               {t('languageSettingsTitle', 'Language Settings')}
             </CardTitle>
             <CardDescription>{t('languageSettingsDescription', 'Choose your preferred display language for the application.')}</CardDescription>
@@ -150,7 +149,7 @@ export default function AdminSettingsPage() {
             <LanguageSwitcher />
           </CardContent>
         </Card>
-        */}
+        
 
         <Card className="lg:col-span-3">
           <CardHeader>

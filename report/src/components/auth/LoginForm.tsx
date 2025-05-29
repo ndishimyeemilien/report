@@ -23,6 +23,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useState } from "react";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 const formSchema = z.object({
   email: z.string().email({ message: "Invalid email address." }),
@@ -30,6 +31,7 @@ const formSchema = z.object({
 });
 
 export function LoginForm() {
+  const { t } = useTranslation();
   const { toast } = useToast();
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
@@ -49,7 +51,6 @@ export function LoginForm() {
       const userCredential = await signInWithEmailAndPassword(auth, values.email, values.password);
       const user = userCredential.user;
 
-      // Fetch user profile to determine role for redirection
       const userDocRef = doc(db, "users", user.uid);
       const userDocSnap = await getDoc(userDocRef);
 
@@ -67,17 +68,15 @@ export function LoginForm() {
           router.push("/secretary/dashboard");
         }
          else {
-          // Fallback if role is not defined or unexpected
           router.push("/");
         }
       } else {
-        // Should not happen if registration creates user doc, but handle defensively
         toast({
           title: "Login Failed",
           description: "User profile not found. Please contact support.",
           variant: "destructive",
         });
-         await auth.signOut(); // Sign out user as profile is missing
+         await auth.signOut(); 
       }
     } catch (error: any) {
       let description = "An unexpected error occurred. Please try again.";
@@ -114,7 +113,7 @@ export function LoginForm() {
           name="email"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Email</FormLabel>
+              <FormLabel>{t('emailLabel')}</FormLabel>
               <FormControl>
                 <Input placeholder="admin@example.com" {...field} />
               </FormControl>
@@ -127,7 +126,7 @@ export function LoginForm() {
           name="password"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Password</FormLabel>
+              <FormLabel>{t('passwordLabel')}</FormLabel>
               <FormControl>
                 <div className="relative">
                   <Input
@@ -152,12 +151,12 @@ export function LoginForm() {
         />
         <Button type="submit" className="w-full" disabled={isLoading}>
           {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          Login
+          {t('loginButton')}
         </Button>
         <p className="text-center text-sm text-muted-foreground">
-          Don&apos;t have an account?{" "}
+          {t('dontHaveAccount')}{" "}
           <Link href="/register" className="font-medium text-primary hover:underline">
-            Register here
+            {t('registerHereLink')}
           </Link>
         </p>
       </form>
