@@ -25,10 +25,9 @@ export default function HomePage() {
         } else if (userProfile.role === 'Secretary') {
           router.replace("/secretary/dashboard");
         } else {
-          router.replace("/login"); // Fallback for unexpected roles
+          router.replace("/login"); 
         }
       }
-      // If not loading and no current user, stay on this page to show homepage content
     }
   }, [currentUser, userProfile, loading, router]);
 
@@ -41,19 +40,20 @@ export default function HomePage() {
     );
   }
 
-  // If not loading and no current user, show the homepage content
   if (!currentUser) {
     return (
       <div className="flex min-h-screen flex-col items-center bg-gradient-to-br from-secondary to-background text-foreground">
-        <header className="w-full p-4 flex justify-between items-center">
-          <Logo />
-          <div className="flex items-center gap-2">
-            <LanguageSwitcher />
-            <Button asChild variant="outline">
-              <Link href="/login">
-                <LogIn className="mr-2 h-4 w-4" /> {t('loginButton', 'Login')}
-              </Link>
-            </Button>
+        <header className="w-full p-4 shadow-md bg-card">
+          <div className="container mx-auto flex justify-between items-center">
+            <Logo />
+            <div className="flex items-center gap-2">
+              <LanguageSwitcher />
+              <Button asChild variant="outline">
+                <Link href="/login">
+                  <LogIn className="mr-2 h-4 w-4" /> {t('loginButton', 'Login')}
+                </Link>
+              </Button>
+            </div>
           </div>
         </header>
 
@@ -105,9 +105,6 @@ export default function HomePage() {
     );
   }
 
-  // This will only be reached if loading is false AND currentUser is true,
-  // but the redirection in useEffect hasn't happened yet.
-  // Displaying a loader here is a safe fallback.
   return (
     <div className="flex h-screen items-center justify-center bg-background">
       <Loader2 className="h-16 w-16 animate-spin text-primary" />

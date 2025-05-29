@@ -1,7 +1,4 @@
-<<<<<<< HEAD
-=======
 
->>>>>>> 5dbc128 (mjhh)
 "use client";
 
 import { Button } from "@/components/ui/button";
@@ -13,11 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-<<<<<<< HEAD
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-=======
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
->>>>>>> 5dbc128 (mjhh)
 import { useAuth } from "@/context/AuthContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Menu, LogOut, Settings, Sun, Moon } from "lucide-react";
@@ -25,15 +18,12 @@ import Link from "next/link";
 import Logo from "../shared/Logo";
 import SecretarySidebarNav from "./SecretarySidebarNav"; 
 import { useState, useEffect } from "react";
+import LanguageSwitcher from "../shared/LanguageSwitcher";
 
 const ThemeToggle = () => {
   const [isDarkMode, setIsDarkMode] = useState(false);
 
   useEffect(() => {
-<<<<<<< HEAD
-    // Check for saved theme preference or system preference
-=======
->>>>>>> 5dbc128 (mjhh)
     const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
     const savedTheme = typeof window !== 'undefined' ? localStorage.getItem('theme') : null;
     if (savedTheme) {
@@ -80,14 +70,10 @@ export default function SecretaryHeader() {
             </Button>
           </SheetTrigger>
           <SheetContent side="left" className="flex flex-col p-0 pt-4 bg-sidebar text-sidebar-foreground">
-<<<<<<< HEAD
-             <div className="px-4 mb-4">
-=======
             <SheetHeader className="border-b border-sidebar-border px-4 pb-4">
                <SheetTitle>Menu</SheetTitle> 
             </SheetHeader>
              <div className="px-4 mb-4 mt-2"> 
->>>>>>> 5dbc128 (mjhh)
                 <Logo className="text-sidebar-foreground"/>
              </div>
             <SecretarySidebarNav isMobile={true} />
@@ -95,11 +81,8 @@ export default function SecretaryHeader() {
         </Sheet>
       </div>
       
-<<<<<<< HEAD
-      <div className="flex w-full items-center justify-end gap-4 md:ml-auto">
-=======
       <div className="flex w-full items-center justify-end gap-2 md:ml-auto"> 
->>>>>>> 5dbc128 (mjhh)
+        <LanguageSwitcher />
         <ThemeToggle />
         {currentUser && userProfile ? (
           <DropdownMenu>
@@ -148,7 +131,3 @@ export default function SecretaryHeader() {
     </header>
   );
 }
-<<<<<<< HEAD
-
-=======
->>>>>>> 5dbc128 (mjhh)
