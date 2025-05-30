@@ -12,15 +12,26 @@ import LanguageSwitcher from "@/components/shared/LanguageSwitcher";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
+// Helper component for loading state
+const LoadingScreen = ({ message }: { message: string }) => (
+  <div className="flex h-screen flex-col items-center justify-center bg-background text-center p-4">
+    <Loader2 className="h-16 w-16 animate-spin text-primary mb-4" />
+    <p className="text-xl text-muted-foreground">{message}</p>
+  </div>
+);
+
 export default function HomePage() {
-  const { currentUser, userProfile, loading } = useAuth();
+  const { currentUser, userProfile, loading: authLoading } = useAuth();
   const router = useRouter();
   const { t, i18n } = useTranslation();
 
+  console.log("HomePage rendered. Auth Loading:", authLoading, "CurrentUser:", !!currentUser);
+
   useEffect(() => {
-    if (!loading) {
+    console.log("HomePage useEffect triggered. Auth Loading:", authLoading, "CurrentUser:", !!currentUser, "UserProfile:", !!userProfile);
+    if (!authLoading) {
       if (currentUser && userProfile) {
-        // Existing redirection logic for authenticated users
+        console.log("HomePage useEffect: User authenticated with profile. Role:", userProfile.role, "Redirecting...");
         if (userProfile.role === 'Admin') {
           router.replace("/admin/dashboard");
         } else if (userProfile.role === 'Teacher') {
@@ -28,37 +39,44 @@ export default function HomePage() {
         } else if (userProfile.role === 'Secretary') {
           router.replace("/secretary/dashboard");
         } else {
-          // Fallback or unhandled role, might redirect to login or a generic dashboard
-          router.replace("/login"); 
+          console.warn("HomePage useEffect: Unknown user role, redirecting to /login. Role:", userProfile.role);
+          router.replace("/login"); // Fallback for unknown role
         }
+      } else if (currentUser && !userProfile) {
+        console.log("HomePage useEffect: User authenticated but profile not yet loaded. Waiting for profile...");
+        // Waiting for profile to load, do nothing here, the LoadingScreen for profile will show.
+      } else {
+        console.log("HomePage useEffect: User not authenticated. Public page should render.");
+        // User is not logged in, no redirect needed from useEffect, public page content will render.
       }
-      // If !currentUser, the user is not logged in, and the effect does nothing here,
-      // allowing the JSX for the public homepage to render.
     }
-  }, [currentUser, userProfile, loading, router]);
+  }, [currentUser, userProfile, authLoading, router]);
 
-  const keyFeatures = [
-    { key: 'featureGradeManagement', icon: CheckCircle, descKey: 'featureGradeManagementDesc' },
-    { key: 'featureReportCards', icon: FileText, descKey: 'featureReportCardsDesc' },
-    { key: 'featureSmsEmail', icon: Send, descKey: 'featureSmsEmailDesc' },
-    { key: 'featureAttendanceBehavior', icon: ShieldCheck, descKey: 'featureAttendanceBehaviorDesc' },
-    { key: 'featureTeacherStudentReports', icon: BarChart2, descKey: 'featureTeacherStudentReportsDesc' },
-    { key: 'featureAssignments', icon: Briefcase, descKey: 'featureAssignmentsDesc' },
-    { key: 'featurePhotosDocuments', icon: Camera, descKey: 'featurePhotosDocumentsDesc' },
-    { key: 'featureCommunication', icon: MessageSquare, descKey: 'featureCommunicationDesc' },
-  ];
-
-  if (loading) {
-    return (
-      <div className="flex h-screen items-center justify-center bg-background">
-        <Loader2 className="h-16 w-16 animate-spin text-primary" />
-        <p className="ml-4 text-xl text-muted-foreground">{t('loadingApp', 'Loading Report-Manager Lite...')}</p>
-      </div>
-    );
+  if (authLoading) {
+    return <LoadingScreen message={t('loadingApp', 'Loading Report-Manager Lite...')} />;
   }
 
-  // If not loading and not authenticated, show the public homepage
+  if (currentUser && !userProfile) {
+    // This case handles the brief period where Firebase auth state is resolved (currentUser exists),
+    // but the userProfile from Firestore might still be fetching.
+    console.log("HomePage rendering: User authenticated, waiting for profile...");
+    return <LoadingScreen message={t('loadingProfile', 'Loading user profile...')} />;
+  }
+
   if (!currentUser) {
+    // This is the unauthenticated state, show the public homepage
+    console.log("HomePage rendering: Public homepage for unauthenticated user.");
+    const keyFeatures = [
+      { key: 'featureGradeManagement', icon: CheckCircle, descKey: 'featureGradeManagementDesc' },
+      { key: 'featureReportCards', icon: FileText, descKey: 'featureReportCardsDesc' },
+      { key: 'featureSmsEmail', icon: Send, descKey: 'featureSmsEmailDesc' },
+      { key: 'featureAttendanceBehavior', icon: ShieldCheck, descKey: 'featureAttendanceBehaviorDesc' },
+      { key: 'featureTeacherStudentReports', icon: BarChart2, descKey: 'featureTeacherStudentReportsDesc' },
+      { key: 'featureAssignments', icon: Briefcase, descKey: 'featureAssignmentsDesc' },
+      { key: 'featurePhotosDocuments', icon: Camera, descKey: 'featurePhotosDocumentsDesc' },
+      { key: 'featureCommunication', icon: MessageSquare, descKey: 'featureCommunicationDesc' },
+    ];
+
     return (
       <div className="flex min-h-screen flex-col items-center bg-gradient-to-br from-secondary to-background text-foreground">
         <header className="w-full p-4 shadow-md bg-card sticky top-0 z-50">
@@ -135,11 +153,8 @@ export default function HomePage() {
     );
   }
 
-  // This part is for authenticated users before redirection happens, or if something unexpected occurs
-  return (
-    <div className="flex h-screen items-center justify-center bg-background">
-      <Loader2 className="h-16 w-16 animate-spin text-primary" />
-      <p className="ml-4 text-xl text-muted-foreground">{t('redirecting', 'Redirecting...')}</p>
-    </div>
-  );
+  // If authLoading is false and currentUser exists (and userProfile is implicitly loaded due to the check above),
+  // this means useEffect should be redirecting. Display a "Redirecting..." loader.
+  console.log("HomePage rendering: Authenticated user, redirecting loader...");
+  return <LoadingScreen message={t('redirecting', 'Redirecting...')} />;
 }
