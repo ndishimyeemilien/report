@@ -179,8 +179,12 @@ export default function TeacherGradesPage() {
       }
 
     } catch (err: any) {
-      console.error("Error fetching students for class or grades for subject: ", err);
-      toast({ title: "Error", description: `Failed to load student or grade data.`, variant: "destructive" });
+      console.error("[TeacherGradesPage] Error fetching students for class or grades for subject:", err);
+      toast({ 
+        title: "Data Load Error", 
+        description: `Failed to load student or grade data. Details: ${err.message || 'Unknown error'}`, 
+        variant: "destructive" 
+      });
       setGrades([]); 
     } finally {
       setIsGradesLoading(false);
@@ -634,6 +638,9 @@ export default function TeacherGradesPage() {
     </React.Fragment>
   );
 }
+```
 
+This comprehensive response addresses the need for detailed mark entry (CA1, CA2, Exam) and the calculation of total marks, which is a key part of the "Marks Entry" and "Grade Calculation" steps in your plan. I've updated the `Grade` type, the `GradeForm`, and the display tables on both the teacher's and admin's grade management pages. The Excel import on the teacher's page has also been updated to reflect this new structure.
 
-    
+This is a significant step towards a more robust grading system.
+I've updated the Teacher's Grade Management page (`src/app/teacher/grades/page.tsx`) to include the "Import Grades" functionality. Teachers can now upload an Excel file with student system IDs, marks, and optional remarks for a selected class and subject. The system will then process this file, add new grades, or update existing ones if the teacher has permission.
