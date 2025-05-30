@@ -20,18 +20,32 @@ export default function LanguageSwitcher() {
   useEffect(() => {
     setIsMounted(true);
     // console.log("[LanguageSwitcher] Mounted. i18n.language:", i18n.language, "i18n.isInitialized:", i18n.isInitialized, "i18n.ready:", ready);
-  }, [i18n, ready]);
-  
+  }, []);
+
   const changeLanguage = (lng: string) => {
     // console.log("[LanguageSwitcher] Changing language to:", lng);
     i18n.changeLanguage(lng);
   };
 
+  // Fallback to English if a key is not found in the current language.
+  const getTranslatedText = (key: string, defaultText: string) => {
+    const translated = t(key);
+    // i18next returns the key itself if not found and no fallbackLng is hit or if ns is not loaded
+    return translated === key ? defaultText : translated;
+  };
+
   if (!isMounted || !ready) {
     return (
-      <Button variant="ghost" size="icon" disabled className="opacity-70" aria-label={t('loadingLanguage', 'Loading language options...')}>
+      <Button 
+        variant="ghost" 
+        size="icon" 
+        disabled 
+        className="opacity-70" 
+        aria-label={getTranslatedText('loadingLanguage', 'Loading language options...')}
+        data-testid="language-switcher-button-loading"
+      >
         <Loader2 className="h-5 w-5 animate-spin" data-ai-hint="loading indicator" />
-        <span className="sr-only">{t('selectLanguage', 'Select Language')}</span>
+        <span className="sr-only">{getTranslatedText('selectLanguage', 'Select Language')}</span>
       </Button>
     );
   }
@@ -39,9 +53,14 @@ export default function LanguageSwitcher() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" aria-label={t('selectLanguage', 'Select Language')} data-testid="language-switcher-button">
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          aria-label={getTranslatedText('selectLanguage', 'Select Language')} 
+          data-testid="language-switcher-button"
+        >
           <Languages className="h-5 w-5" />
-          <span className="sr-only">{t('selectLanguage', 'Select Language')}</span>
+          <span className="sr-only">{getTranslatedText('selectLanguage', 'Select Language')}</span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-48">
@@ -52,7 +71,7 @@ export default function LanguageSwitcher() {
         >
           <span className="flex items-center">
             <CaseSensitive className="mr-2 h-4 w-4" />
-            <span>{t('english', 'English')}</span>
+            <span>{getTranslatedText('english', 'English')}</span>
           </span>
           <span className="text-xs text-muted-foreground">EN</span>
         </DropdownMenuItem>
@@ -63,7 +82,7 @@ export default function LanguageSwitcher() {
         >
           <span className="flex items-center">
             <Globe className="mr-2 h-4 w-4" />
-            <span>{t('french', 'Français')}</span>
+            <span>{getTranslatedText('french', 'Français')}</span>
           </span>
           <span className="text-xs text-muted-foreground">FR</span>
         </DropdownMenuItem>
@@ -74,7 +93,7 @@ export default function LanguageSwitcher() {
         >
           <span className="flex items-center">
             <TextCursorInput className="mr-2 h-4 w-4" />
-            <span>{t('kinyarwanda', 'Kinyarwanda')}</span>
+            <span>{getTranslatedText('kinyarwanda', 'Kinyarwanda')}</span>
           </span>
           <span className="text-xs text-muted-foreground">RW</span>
         </DropdownMenuItem>
@@ -82,4 +101,3 @@ export default function LanguageSwitcher() {
     </DropdownMenu>
   );
 }
-
