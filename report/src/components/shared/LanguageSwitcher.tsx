@@ -19,20 +19,25 @@ export default function LanguageSwitcher() {
 
   useEffect(() => {
     setIsMounted(true);
-    // console.log("[LanguageSwitcher] Mounted. i18n.language:", i18n.language, "i18n.isInitialized:", i18n.isInitialized, "i18n.ready:", ready);
   }, []);
 
   const changeLanguage = (lng: string) => {
-    // console.log("[LanguageSwitcher] Changing language to:", lng);
     i18n.changeLanguage(lng);
   };
 
-  // Fallback to English if a key is not found in the current language.
   const getTranslatedText = (key: string, defaultText: string) => {
+    if (!ready) return defaultText; // Return default if i18n not ready
     const translated = t(key);
-    // i18next returns the key itself if not found and no fallbackLng is hit or if ns is not loaded
     return translated === key ? defaultText : translated;
   };
+  
+  const currentLanguageName = () => {
+    const lang = i18n.language;
+    if (lang.startsWith('en')) return getTranslatedText('english', 'English');
+    if (lang.startsWith('fr')) return getTranslatedText('french', 'Français');
+    if (lang.startsWith('rw')) return getTranslatedText('kinyarwanda', 'Kinyarwanda');
+    return getTranslatedText('selectLanguage', 'Language');
+  }
 
   if (!isMounted || !ready) {
     return (
@@ -60,7 +65,7 @@ export default function LanguageSwitcher() {
           data-testid="language-switcher-button"
         >
           <Languages className="h-5 w-5" />
-          <span className="sr-only">{getTranslatedText('selectLanguage', 'Select Language')}</span>
+          <span className="sr-only">{currentLanguageName()}</span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-48">
