@@ -3,7 +3,7 @@
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
-import { Loader2, LogIn, Info, FileText, Users, CheckCircle, ShieldCheck, MessageSquare, BarChart2, Send, Camera, Briefcase } from "lucide-react";
+import { Loader2, LogIn, Info, FileText, Users, CheckCircle, ShieldCheck, MessageSquare, BarChart2, Send, Camera, Briefcase, School } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import Logo from "@/components/shared/Logo";
@@ -20,6 +20,7 @@ export default function HomePage() {
   useEffect(() => {
     if (!loading) {
       if (currentUser && userProfile) {
+        // Existing redirection logic
         if (userProfile.role === 'Admin') {
           router.replace("/admin/dashboard");
         } else if (userProfile.role === 'Teacher') {
@@ -64,6 +65,11 @@ export default function HomePage() {
               <Button asChild variant="outline">
                 <Link href="/login">
                   <LogIn className="mr-2 h-4 w-4" /> {t('loginButton', 'Login')}
+                </Link>
+              </Button>
+               <Button asChild variant="default" className="bg-accent hover:bg-accent/90">
+                <Link href="/register-school">
+                  <School className="mr-2 h-4 w-4" /> {t('registerSchoolButtonNav', 'Register School')}
                 </Link>
               </Button>
             </nav>

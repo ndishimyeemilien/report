@@ -11,20 +11,19 @@ i18n
   .init({
     supportedLngs: ['en', 'fr', 'rw'],
     fallbackLng: 'en',
-    debug: process.env.NODE_ENV === 'development', // Enable debug output in development
+    debug: process.env.NODE_ENV === 'development', 
     interpolation: {
-      escapeValue: false, // react already safes from xss
+      escapeValue: false, 
     },
     backend: {
-      loadPath: '/locales/{{lng}}/translation.json', // path to translation files
+      loadPath: '/locales/{{lng}}/translation.json', 
     },
-    // Options for language detector
     detection: {
       order: ['localStorage', 'navigator', 'htmlTag'],
-      caches: ['localStorage'], // cache user language preference
+      caches: ['localStorage'], 
     },
     react: {
-      useSuspense: false, // Set to false to avoid issues if not using Suspense properly for translations
+      useSuspense: false, 
     }
   });
 
