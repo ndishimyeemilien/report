@@ -6,20 +6,20 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { LayoutDashboard, BookOpen, Edit, CheckSquare } from "lucide-react"; 
-// SidebarLanguageSwitcher is removed as LanguageSwitcher is now in headers
+import { useTranslation } from "react-i18next";
 
 export interface NavItem {
   href: string;
-  label: string;
+  labelKey: string; // Changed from label to labelKey
   icon: React.ElementType;
   disabled?: boolean;
 }
 
-export const teacherNavItems: NavItem[] = [
-  { href: "/teacher/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/teacher/courses", label: "My Courses", icon: BookOpen }, 
-  { href: "/teacher/grades", label: "Enter Grades", icon: Edit },
-  { href: "/teacher/attendance", label: "Attendance", icon: CheckSquare },
+export const teacherNavItemsData: NavItem[] = [
+  { href: "/teacher/dashboard", labelKey: "navTeacherDashboard", icon: LayoutDashboard },
+  { href: "/teacher/courses", labelKey: "navTeacherMyCourses", icon: BookOpen }, 
+  { href: "/teacher/grades", labelKey: "navTeacherEnterGrades", icon: Edit },
+  { href: "/teacher/attendance", labelKey: "navTeacherAttendance", icon: CheckSquare },
 ];
 
 interface TeacherSidebarNavProps {
@@ -28,7 +28,8 @@ interface TeacherSidebarNavProps {
 
 export default function TeacherSidebarNav({ isMobile = false }: TeacherSidebarNavProps) {
   const pathname = usePathname();
-  const navItems = teacherNavItems;
+  const { t } = useTranslation();
+  const navItems = teacherNavItemsData;
 
   return (
     <nav className={cn("flex flex-col gap-1 px-2 py-4", isMobile ? "" : "md:px-4")}>
@@ -49,7 +50,7 @@ export default function TeacherSidebarNav({ isMobile = false }: TeacherSidebarNa
         
         return (
           <Button
-            key={item.label}
+            key={item.labelKey} // Use labelKey for key
             asChild
             variant={buttonVariant}
             className={buttonClassName}
@@ -57,12 +58,11 @@ export default function TeacherSidebarNav({ isMobile = false }: TeacherSidebarNa
           >
             <Link href={item.disabled ? "#" : item.href}>
               <item.icon className="mr-3 h-5 w-5" />
-              {item.label}
+              {t(item.labelKey)}
             </Link>
           </Button>
         );
       })}
-      {/* SidebarLanguageSwitcher removed from here */}
     </nav>
   );
 }

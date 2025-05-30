@@ -6,25 +6,22 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { LayoutDashboard, Users, BookOpen, UsersRound, Archive, Link2 } from "lucide-react"; 
-import type { NavItem as AdminNavItemType } from "./AdminSidebarNav"; // Reuse NavItem type, but rename to avoid conflict if needed
-// SidebarLanguageSwitcher is removed as LanguageSwitcher is now in headers
+import { useTranslation } from "react-i18next";
 
-// Assuming NavItem is defined as:
 interface NavItem {
   href: string;
-  label: string; // Or labelKey if using i18n
+  labelKey: string; 
   icon: React.ElementType;
   disabled?: boolean;
 }
 
-
-export const secretaryNavItems: NavItem[] = [
-  { href: "/secretary/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/secretary/students", label: "Students", icon: Users },
-  { href: "/secretary/classes", label: "Classes", icon: Archive }, 
-  { href: "/secretary/courses", label: "Courses", icon: BookOpen },
-  { href: "/secretary/class-assignments", label: "Class Assignments", icon: Link2 }, 
-  { href: "/secretary/enrollments", label: "Student Enrollments", icon: UsersRound }, 
+export const secretaryNavItemsData: NavItem[] = [
+  { href: "/secretary/dashboard", labelKey: "navSecretaryDashboard", icon: LayoutDashboard },
+  { href: "/secretary/students", labelKey: "navSecretaryStudents", icon: Users },
+  { href: "/secretary/classes", labelKey: "navSecretaryClasses", icon: Archive }, 
+  { href: "/secretary/courses", labelKey: "navSecretaryCourses", icon: BookOpen },
+  { href: "/secretary/class-assignments", labelKey: "navSecretaryClassAssignments", icon: Link2 }, 
+  { href: "/secretary/enrollments", labelKey: "navSecretaryStudentEnrollments", icon: UsersRound }, 
 ];
 
 interface SecretarySidebarNavProps {
@@ -33,7 +30,8 @@ interface SecretarySidebarNavProps {
 
 export default function SecretarySidebarNav({ isMobile = false }: SecretarySidebarNavProps) {
   const pathname = usePathname();
-  const navItems = secretaryNavItems;
+  const { t } = useTranslation();
+  const navItems = secretaryNavItemsData;
 
   return (
     <nav className={cn("flex flex-col gap-1 px-2 py-4", isMobile ? "" : "md:px-4")}>
@@ -54,7 +52,7 @@ export default function SecretarySidebarNav({ isMobile = false }: SecretarySideb
 
         return (
           <Button
-            key={item.label}
+            key={item.labelKey} // Use labelKey for key
             asChild
             variant={buttonVariant}
             className={buttonClassName}
@@ -62,12 +60,11 @@ export default function SecretarySidebarNav({ isMobile = false }: SecretarySideb
           >
             <Link href={item.disabled ? "#" : item.href}>
               <item.icon className="mr-3 h-5 w-5" />
-              {item.label}
+              {t(item.labelKey)}
             </Link>
           </Button>
         );
       })}
-      {/* SidebarLanguageSwitcher removed from here */}
     </nav>
   );
 }
