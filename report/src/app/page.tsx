@@ -20,7 +20,7 @@ export default function HomePage() {
   useEffect(() => {
     if (!loading) {
       if (currentUser && userProfile) {
-        // Existing redirection logic
+        // Existing redirection logic for authenticated users
         if (userProfile.role === 'Admin') {
           router.replace("/admin/dashboard");
         } else if (userProfile.role === 'Teacher') {
@@ -28,9 +28,12 @@ export default function HomePage() {
         } else if (userProfile.role === 'Secretary') {
           router.replace("/secretary/dashboard");
         } else {
+          // Fallback or unhandled role, might redirect to login or a generic dashboard
           router.replace("/login"); 
         }
       }
+      // If !currentUser, the user is not logged in, and the effect does nothing here,
+      // allowing the JSX for the public homepage to render.
     }
   }, [currentUser, userProfile, loading, router]);
 
@@ -54,6 +57,7 @@ export default function HomePage() {
     );
   }
 
+  // If not loading and not authenticated, show the public homepage
   if (!currentUser) {
     return (
       <div className="flex min-h-screen flex-col items-center bg-gradient-to-br from-secondary to-background text-foreground">
@@ -131,7 +135,7 @@ export default function HomePage() {
     );
   }
 
-  // This part is for authenticated users before redirection happens
+  // This part is for authenticated users before redirection happens, or if something unexpected occurs
   return (
     <div className="flex h-screen items-center justify-center bg-background">
       <Loader2 className="h-16 w-16 animate-spin text-primary" />
