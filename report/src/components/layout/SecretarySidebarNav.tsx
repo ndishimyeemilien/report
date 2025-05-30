@@ -52,7 +52,7 @@ export default function SecretarySidebarNav({ isMobile = false }: SecretarySideb
 
         return (
           <Button
-            key={item.labelKey} // Use labelKey for key
+            key={item.labelKey} 
             asChild
             variant={buttonVariant}
             className={buttonClassName}

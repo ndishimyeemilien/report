@@ -108,14 +108,6 @@ export default function SecretaryHeader() {
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              {/* Secretary might have a settings page similar to admin or simpler */}
-              {/* <DropdownMenuItem asChild>
-                <Link href="/secretary/settings">
-                  <Settings className="mr-2 h-4 w-4" />
-                  <span>Settings</span>
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator /> */}
               <DropdownMenuItem onClick={logout}>
                 <LogOut className="mr-2 h-4 w-4" />
                 <span>Log out</span>

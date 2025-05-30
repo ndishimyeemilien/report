@@ -6,7 +6,6 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { LayoutDashboard, BookOpen, ClipboardList, FileText, Settings, Users, UserCog, Users2, Archive, CalendarClock, Group, MessageSquare } from "lucide-react";
-// SidebarLanguageSwitcher is removed as LanguageSwitcher is now in headers
 import { useTranslation } from "react-i18next";
 
 export interface NavItem {
@@ -93,7 +92,6 @@ export default function AdminSidebarNav({ isMobile = false }: AdminSidebarNavPro
           </Button>
         );
       })}
-      {/* SidebarLanguageSwitcher removed from here */}
     </nav>
   );
 }

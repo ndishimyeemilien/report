@@ -10,7 +10,7 @@ import { useTranslation } from "react-i18next";
 
 export interface NavItem {
   href: string;
-  labelKey: string; // Changed from label to labelKey
+  labelKey: string; 
   icon: React.ElementType;
   disabled?: boolean;
 }
@@ -50,7 +50,7 @@ export default function TeacherSidebarNav({ isMobile = false }: TeacherSidebarNa
         
         return (
           <Button
-            key={item.labelKey} // Use labelKey for key
+            key={item.labelKey} 
             asChild
             variant={buttonVariant}
             className={buttonClassName}

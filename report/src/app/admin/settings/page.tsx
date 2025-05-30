@@ -6,9 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { AlertTriangle, LockKeyhole, BookCopy, Loader2, School, Languages } from "lucide-react"; 
+import { AlertTriangle, LockKeyhole, BookCopy, Loader2, School } from "lucide-react"; 
 import { ChangePasswordForm } from "@/components/auth/ChangePasswordForm";
-import LanguageSwitcher from "@/components/shared/LanguageSwitcher"; // Import the switcher
 import { useAuth } from "@/context/AuthContext";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -206,19 +205,6 @@ export default function AdminSettingsPage() {
           </CardContent>
         </Card>
         
-        <Card className="lg:col-span-3">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-                <Languages className="h-5 w-5 text-primary" />
-                {t('languageSettingsTitle', 'Language Settings')}
-            </CardTitle>
-            <CardDescription>{t('languageSettingsDescription', 'Choose your preferred display language for the application.')}</CardDescription>
-          </CardHeader>
-          <CardContent className="pt-2"> {/* Adjusted padding for better alignment */}
-            <LanguageSwitcher />
-          </CardContent>
-        </Card>
-
         <Card className="lg:col-span-3">
           <CardHeader>
             <CardTitle>{t('appConfigTitle', 'Application Configuration')}</CardTitle>

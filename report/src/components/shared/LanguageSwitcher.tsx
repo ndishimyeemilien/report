@@ -29,7 +29,7 @@ export default function LanguageSwitcher() {
 
   if (!isMounted || !ready) {
     return (
-      <Button variant="ghost" size="icon" disabled className="opacity-70" aria-label={t('loadingLanguage', 'Loading language options')}>
+      <Button variant="ghost" size="icon" disabled className="opacity-70" aria-label={t('loadingLanguage', 'Loading language options...')}>
         <Loader2 className="h-5 w-5 animate-spin" data-ai-hint="loading indicator" />
         <span className="sr-only">{t('selectLanguage', 'Select Language')}</span>
       </Button>
@@ -82,3 +82,4 @@ export default function LanguageSwitcher() {
     </DropdownMenu>
   );
 }
+

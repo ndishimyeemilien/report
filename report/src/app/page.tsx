@@ -27,7 +27,6 @@ export default function HomePage() {
         } else if (userProfile.role === 'Secretary') {
           router.replace("/secretary/dashboard");
         } else {
-          // Fallback or unhandled role
           router.replace("/login"); 
         }
       }
@@ -126,7 +125,6 @@ export default function HomePage() {
     );
   }
 
-  // Fallback for authenticated users if redirection hasn't happened yet (should be brief)
   return (
     <div className="flex h-screen items-center justify-center bg-background">
       <Loader2 className="h-16 w-16 animate-spin text-primary" />

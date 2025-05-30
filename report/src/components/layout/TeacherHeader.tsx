@@ -108,14 +108,6 @@ export default function TeacherHeader() {
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              {/* Teachers might have a simpler settings page or none */}
-              {/* <DropdownMenuItem asChild>
-                <Link href="/teacher/settings">
-                  <Settings className="mr-2 h-4 w-4" />
-                  <span>Settings</span>
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator /> */}
               <DropdownMenuItem onClick={logout}>
                 <LogOut className="mr-2 h-4 w-4" />
                 <span>Log out</span>
