@@ -25,13 +25,13 @@ export default function HomePage() {
   const router = useRouter();
   const { t, i18n } = useTranslation();
 
-  console.log("HomePage rendered. Auth Loading:", authLoading, "CurrentUser:", !!currentUser);
+  // console.log("HomePage Render: AuthLoading:", authLoading, "CurrentUser:", !!currentUser, "UserProfile:", !!userProfile); // v2 - diagnostic log
 
   useEffect(() => {
-    console.log("HomePage useEffect triggered. Auth Loading:", authLoading, "CurrentUser:", !!currentUser, "UserProfile:", !!userProfile);
+    // console.log("HomePage Effect: AuthLoading:", authLoading, "CurrentUser:", !!currentUser, "UserProfile:", !!userProfile); // v2 - diagnostic log
     if (!authLoading) {
       if (currentUser && userProfile) {
-        console.log("HomePage useEffect: User authenticated with profile. Role:", userProfile.role, "Redirecting...");
+        // console.log("HomePage Effect: User authenticated with profile. Role:", userProfile.role, "Redirecting...");
         if (userProfile.role === 'Admin') {
           router.replace("/admin/dashboard");
         } else if (userProfile.role === 'Teacher') {
@@ -39,15 +39,13 @@ export default function HomePage() {
         } else if (userProfile.role === 'Secretary') {
           router.replace("/secretary/dashboard");
         } else {
-          console.warn("HomePage useEffect: Unknown user role, redirecting to /login. Role:", userProfile.role);
-          router.replace("/login"); // Fallback for unknown role
+          // console.warn("HomePage Effect: Unknown user role, redirecting to /login. Role:", userProfile.role);
+          router.replace("/login"); 
         }
       } else if (currentUser && !userProfile) {
-        console.log("HomePage useEffect: User authenticated but profile not yet loaded. Waiting for profile...");
-        // Waiting for profile to load, do nothing here, the LoadingScreen for profile will show.
+        // console.log("HomePage Effect: User authenticated but profile not yet loaded. Waiting...");
       } else {
-        console.log("HomePage useEffect: User not authenticated. Public page should render.");
-        // User is not logged in, no redirect needed from useEffect, public page content will render.
+        // console.log("HomePage Effect: User not authenticated. Public page should render.");
       }
     }
   }, [currentUser, userProfile, authLoading, router]);
@@ -57,15 +55,12 @@ export default function HomePage() {
   }
 
   if (currentUser && !userProfile) {
-    // This case handles the brief period where Firebase auth state is resolved (currentUser exists),
-    // but the userProfile from Firestore might still be fetching.
-    console.log("HomePage rendering: User authenticated, waiting for profile...");
     return <LoadingScreen message={t('loadingProfile', 'Loading user profile...')} />;
   }
 
   if (!currentUser) {
     // This is the unauthenticated state, show the public homepage
-    console.log("HomePage rendering: Public homepage for unauthenticated user.");
+    // console.log("HomePage Rendering: Public homepage for unauthenticated user.");
     const keyFeatures = [
       { key: 'featureGradeManagement', icon: CheckCircle, descKey: 'featureGradeManagementDesc' },
       { key: 'featureReportCards', icon: FileText, descKey: 'featureReportCardsDesc' },
@@ -153,8 +148,7 @@ export default function HomePage() {
     );
   }
 
-  // If authLoading is false and currentUser exists (and userProfile is implicitly loaded due to the check above),
-  // this means useEffect should be redirecting. Display a "Redirecting..." loader.
-  console.log("HomePage rendering: Authenticated user, redirecting loader...");
+  // If authenticated and profile is loaded, this is the redirecting state
+  // console.log("HomePage Rendering: Authenticated user with profile, redirecting loader...");
   return <LoadingScreen message={t('redirecting', 'Redirecting...')} />;
 }
