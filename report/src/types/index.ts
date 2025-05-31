@@ -1,4 +1,5 @@
 
+
 export interface Course {
   id: string;
   name: string; 
@@ -25,6 +26,7 @@ export interface Student {
   dateOfBirth?: string; 
   placeOfBirth?: string; 
   gender?: 'Male' | 'Female' | 'Other' | ''; 
+  conduct?: string; // Added for report card
   createdAt: Date;
   updatedAt: Date;
 }
@@ -63,7 +65,7 @@ export interface UserProfile {
   uid: string;
   email: string | null;
   role: UserRole;
-  schoolId?: string; // ID of the school this user belongs to/manages
+  schoolId?: string; 
   createdAt?: Date;
   updatedAt?: Date;
   assignedCourseNames?: string[]; 
@@ -98,15 +100,17 @@ export interface School {
   id: string;
   name: string;
   type: SchoolType;
-  adminUids: string[]; // Array of UIDs for users who are admins of this school
+  adminUids: string[]; 
   createdAt: Date;
   updatedAt: Date;
-  // Potentially more fields like address, contact, logoUrl etc.
 }
 
 export interface SystemSettings {
   id?: string; 
   schoolName?: string; 
+  schoolAddress?: string; // Added
+  schoolPhoneNumber?: string; // Added
+  schoolLogoUrl?: string; // Added
   defaultAcademicYear?: string;
   defaultTerm?: string;
   updatedAt?: Date;

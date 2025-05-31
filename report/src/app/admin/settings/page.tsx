@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { AlertTriangle, LockKeyhole, BookCopy, Loader2, School } from "lucide-react"; 
+import { AlertTriangle, LockKeyhole, BookCopy, Loader2, School, Building, Phone, Image as ImageIcon } from "lucide-react"; 
 import { ChangePasswordForm } from "@/components/auth/ChangePasswordForm";
 import { useAuth } from "@/context/AuthContext";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -22,6 +22,9 @@ import { useTranslation } from "react-i18next";
 
 const systemSettingsSchema = z.object({
   schoolName: z.string().max(100, "School name is too long.").optional(),
+  schoolAddress: z.string().max(200, "School address is too long.").optional(),
+  schoolPhoneNumber: z.string().max(50, "School phone number is too long.").optional(),
+  schoolLogoUrl: z.string().url({ message: "Please enter a valid URL for the school logo." }).optional().or(z.literal('')),
   defaultAcademicYear: z.string().max(50, "Academic year too long").optional(),
   defaultTerm: z.string().max(50, "Term name too long").optional(),
 });
@@ -39,6 +42,9 @@ export default function AdminSettingsPage() {
     resolver: zodResolver(systemSettingsSchema),
     defaultValues: {
       schoolName: "",
+      schoolAddress: "",
+      schoolPhoneNumber: "",
+      schoolLogoUrl: "",
       defaultAcademicYear: "",
       defaultTerm: "",
     },
@@ -54,6 +60,9 @@ export default function AdminSettingsPage() {
           const data = settingsSnap.data() as SystemSettings;
           settingsForm.reset({
             schoolName: data.schoolName || "",
+            schoolAddress: data.schoolAddress || "",
+            schoolPhoneNumber: data.schoolPhoneNumber || "",
+            schoolLogoUrl: data.schoolLogoUrl || "",
             defaultAcademicYear: data.defaultAcademicYear || "",
             defaultTerm: data.defaultTerm || "",
           });
@@ -86,6 +95,9 @@ export default function AdminSettingsPage() {
       const settingsRef = doc(db, "systemSettings", "generalConfig");
       const dataToSave: SystemSettings = {
         schoolName: values.schoolName || "",
+        schoolAddress: values.schoolAddress || "",
+        schoolPhoneNumber: values.schoolPhoneNumber || "",
+        schoolLogoUrl: values.schoolLogoUrl || "",
         defaultAcademicYear: values.defaultAcademicYear || "",
         defaultTerm: values.defaultTerm || "",
         updatedAt: serverTimestamp() as unknown as Date, 
@@ -139,10 +151,10 @@ export default function AdminSettingsPage() {
         <Card className="lg:col-span-3">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-               <BookCopy className="h-5 w-5 text-primary" /> 
-              {t('systemDefaultsTitle', 'System Defaults & Information')}
+               <School className="h-5 w-5 text-primary" /> 
+              {t('schoolInformationTitle', 'School Information & System Defaults')}
             </CardTitle>
-            <CardDescription>{t('systemDefaultsDescription', 'Set system-wide default values and school information.')}</CardDescription>
+            <CardDescription>{t('schoolInformationDescription', 'Set school details for report cards and system-wide default values.')}</CardDescription>
           </CardHeader>
           <CardContent>
             {isLoadingSettings ? (
@@ -163,6 +175,51 @@ export default function AdminSettingsPage() {
                         </FormLabel>
                         <FormControl>
                           <Input placeholder={t('schoolNamePlaceholder', 'e.g., College de Bethel / APARU')} {...field} value={field.value ?? ''} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={settingsForm.control}
+                    name="schoolAddress"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center gap-1">
+                          <Building className="h-4 w-4" /> {t('schoolAddressLabel', 'School Address')}
+                        </FormLabel>
+                        <FormControl>
+                          <Input placeholder={t('schoolAddressPlaceholder', 'e.g., P.O.BOX: 70 RUHANGO')} {...field} value={field.value ?? ''} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={settingsForm.control}
+                    name="schoolPhoneNumber"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center gap-1">
+                           <Phone className="h-4 w-4" /> {t('schoolPhoneLabel', 'School Phone Number')}
+                        </FormLabel>
+                        <FormControl>
+                          <Input placeholder={t('schoolPhonePlaceholder', 'e.g., 0788836651 / 0784522178')} {...field} value={field.value ?? ''} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={settingsForm.control}
+                    name="schoolLogoUrl"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center gap-1">
+                           <ImageIcon className="h-4 w-4" /> {t('schoolLogoUrlLabel', 'School Logo URL (Optional)')}
+                        </FormLabel>
+                        <FormControl>
+                          <Input type="url" placeholder={t('schoolLogoUrlPlaceholder', 'https://example.com/logo.png')} {...field} value={field.value ?? ''} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -197,7 +254,7 @@ export default function AdminSettingsPage() {
                   />
                   <Button type="submit" className="w-full sm:w-auto bg-accent hover:bg-accent/90" disabled={isSavingSettings}>
                     {isSavingSettings && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    {t('saveSystemDefaultsButton', 'Save System Defaults')}
+                    {t('saveSystemDefaultsButton', 'Save School Info & Defaults')}
                   </Button>
                 </form>
               </Form>
