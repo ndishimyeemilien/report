@@ -24,8 +24,9 @@ import { useAuth } from "@/context/AuthContext";
 import { addDoc, collection, doc, serverTimestamp, updateDoc, query, where, getDocs, type FieldValue, getDoc } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge"; 
+import { generateRemark } from "@/ai/flows/generate-remark-flow";
 
 const PASS_MARK = 50; // Assuming total marks are out of 100
 
@@ -52,6 +53,7 @@ export function GradeForm({ initialData, onClose, course, students }: GradeFormP
   const router = useRouter();
   const { currentUser, userProfile } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
+  const [isAiLoading, setIsAiLoading] = useState(false);
   const [isDefaultsLoading, setIsDefaultsLoading] = useState(!initialData);
   const [calculatedTotalMarks, setCalculatedTotalMarks] = useState<number | null>(null);
   const [calculatedStatus, setCalculatedStatus] = useState<'Pass' | 'Fail' | null>(null);
@@ -71,6 +73,7 @@ export function GradeForm({ initialData, onClose, course, students }: GradeFormP
   const ca1Value = form.watch("ca1");
   const ca2Value = form.watch("ca2");
   const examValue = form.watch("exam");
+  const studentIdValue = form.watch("studentId");
 
   useEffect(() => {
     const val1 = ca1Value ?? 0;
@@ -110,6 +113,33 @@ export function GradeForm({ initialData, onClose, course, students }: GradeFormP
     fetchSystemDefaults();
   }, [initialData, form]);
 
+  const handleGenerateRemark = async () => {
+    if (!studentIdValue || calculatedTotalMarks === null || calculatedStatus === null) {
+      toast({
+        title: "Cannot Generate Remark",
+        description: "Please select a student and ensure marks are entered to calculate a total.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setIsAiLoading(true);
+    const selectedStudent = students.find(s => s.id === studentIdValue);
+    try {
+      const result = await generateRemark({
+        studentName: selectedStudent?.fullName || "the student",
+        courseName: course.name,
+        totalMarks: calculatedTotalMarks,
+        status: calculatedStatus,
+      });
+      form.setValue("remarks", result.remark);
+      toast({ title: "AI Remark Generated", description: "The remark has been filled in for you."});
+    } catch (error) {
+      console.error("Error generating AI remark:", error);
+      toast({ title: "AI Error", description: "Could not generate remark. Please try again.", variant: "destructive" });
+    } finally {
+      setIsAiLoading(false);
+    }
+  };
 
   const onSubmit = async (values: GradeFormValues) => {
     setIsLoading(true);
@@ -127,8 +157,14 @@ export function GradeForm({ initialData, onClose, course, students }: GradeFormP
     }
 
     const termForGrade = values.term;
-    const finalTotalMarks = (values.ca1 ?? 0) + (values.ca2 ?? 0) + (values.exam ?? 0);
-    const finalStatus: 'Pass' | 'Fail' = finalTotalMarks >= PASS_MARK ? 'Pass' : 'Fail';
+    const finalTotalMarks = calculatedTotalMarks; // Use state value
+    const finalStatus = calculatedStatus; // Use state value
+
+    if (finalTotalMarks === null || finalStatus === null) {
+       toast({ title: "Calculation Error", description: "Could not calculate total marks or status.", variant: "destructive"});
+       setIsLoading(false);
+       return;
+    }
 
     if (!initialData) { 
       const gradeQuery = query(
@@ -169,7 +205,6 @@ export function GradeForm({ initialData, onClose, course, students }: GradeFormP
     try {
       if (initialData) {
         const gradeRef = doc(db, "grades", initialData.id);
-        // When editing, term should not change via this form for simplicity
         const updatePayload = {...gradePayload, term: initialData.term}; 
         await updateDoc(gradeRef, updatePayload);
         toast({ title: "Grade Updated", description: `Grade for ${selectedStudent.fullName} in ${course.name} updated.` });
@@ -314,7 +349,19 @@ export function GradeForm({ initialData, onClose, course, students }: GradeFormP
           name="remarks"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Remarks (Optional)</FormLabel>
+              <div className="flex justify-between items-center">
+                <FormLabel>Remarks (Optional)</FormLabel>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleGenerateRemark}
+                  disabled={isAiLoading || !studentIdValue || calculatedStatus === null}
+                >
+                  {isAiLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Sparkles className="mr-2 h-4 w-4" />}
+                  Generate with AI
+                </Button>
+              </div>
               <FormControl>
                 <Textarea
                   placeholder="Any comments on the student's performance..."
