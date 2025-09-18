@@ -34,6 +34,7 @@ interface DashboardStats {
 
 export default function DashboardPage() {
   const { t } = useTranslation();
+  console.log("Admin Dashboard page rendered"); // Benign console log added
   const [statsData, setStatsData] = useState<DashboardStats>({
     totalCourses: 0,
     totalClasses: 0,
