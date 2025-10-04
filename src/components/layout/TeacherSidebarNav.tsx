@@ -39,7 +39,7 @@ export default function TeacherSidebarNav({ isMobile = false }: TeacherSidebarNa
           (pathname.startsWith(item.href) && item.href !== "/teacher/dashboard");
 
         const buttonVariant = isActive ? "default" : "ghost";
-
+        
         const buttonClassName = cn(
           "justify-start w-full",
           isActive
