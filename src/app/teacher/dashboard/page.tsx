@@ -10,6 +10,7 @@ import { db } from "@/lib/firebase";
 import type { Course, Grade } from "@/types";
 import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface TeacherStats {
   assignedCourses: number;
