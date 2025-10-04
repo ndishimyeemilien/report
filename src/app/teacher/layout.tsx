@@ -1,3 +1,4 @@
+
 "use client";
 import TeacherHeader from "@/components/layout/TeacherHeader"; 
 import TeacherSidebar from "@/components/layout/TeacherSidebar"; 
@@ -5,6 +6,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { Loader2 } from "lucide-react";
+import { AIChatWidget } from "@/components/shared/AIChatWidget"; // Import the AI Chat Widget
 
 export default function TeacherLayout({
   children,
@@ -45,6 +47,7 @@ export default function TeacherLayout({
           {children}
         </main>
       </div>
+      <AIChatWidget /> {/* Add the AI Chat Widget here */}
     </div>
   );
 }

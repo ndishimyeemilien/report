@@ -6,6 +6,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { Loader2 } from "lucide-react";
+import { AIChatWidget } from "@/components/shared/AIChatWidget"; // Import the AI Chat Widget
 
 export default function SecretaryLayout({
   children,
@@ -47,7 +48,7 @@ export default function SecretaryLayout({
           {children}
         </main>
       </div>
+      <AIChatWidget /> {/* Add the AI Chat Widget here */}
     </div>
   );
 }
-

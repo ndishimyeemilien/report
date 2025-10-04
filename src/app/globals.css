@@ -2,9 +2,57 @@
 @tailwind components;
 @tailwind utilities;
 
+@keyframes matrix {
+  0% {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  10%, 90% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100vh);
+    opacity: 0;
+  }
+}
+
+.matrix-char {
+  position: absolute;
+  font-family: 'Geist Mono', monospace;
+  animation: matrix linear infinite;
+  color: hsl(var(--primary) / 0.2);
+  user-select: none;
+  pointer-events: none;
+}
+
 body {
   font-family: Arial, Helvetica, sans-serif;
+  position: relative;
+  overflow-x: hidden; /* Prevent horizontal scroll from matrix chars */
 }
+
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: hsl(var(--background));
+  z-index: -2;
+}
+
+#matrix-bg {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  overflow: hidden;
+  z-index: -1;
+  background-color: transparent;
+}
+
 
 @layer base {
   :root {
@@ -33,7 +81,7 @@ body {
     --destructive-foreground: 0 0% 98%;
     
     --border: 210 20% 85%; /* Gray border */
-    --input: 210 20% 80%; /* Input border color, previously was 0 0% 100% and --input-border held this value */
+    --input: 210 20% 80%;
     --ring: 187 100% 38%; /* Teal for focus rings */
     
     --chart-1: 12 76% 61%;
@@ -45,19 +93,19 @@ body {
     --radius: 0.5rem;
 
     /* Sidebar specific colors */
-    --sidebar-background: 235 50% 25%; /* Darker shade of primary for sidebar */
-    --sidebar-foreground: 0 0% 93.3%; /* Light Gray for sidebar text */
-    --sidebar-primary: 187 100% 38%; /* Teal for active/hover elements in sidebar */
+    --sidebar-background: 235 50% 25%;
+    --sidebar-foreground: 0 0% 93.3%;
+    --sidebar-primary: 187 100% 38%;
     --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 235 50% 30%; /* Slightly lighter shade of primary for hover */
+    --sidebar-accent: 235 50% 30%;
     --sidebar-accent-foreground: 0 0% 98%;
     --sidebar-border: 235 50% 20%;
     --sidebar-ring: 187 100% 45%;
   }
 
   .dark {
-    --background: 222 47% 11%; /* Dark Blue-Gray */
-    --foreground: 210 20% 98%; /* Light Gray */
+    --background: 222 47% 11%;
+    --foreground: 210 20% 98%;
 
     --card: 222 47% 15%; 
     --card-foreground: 210 20% 98%;
@@ -65,7 +113,7 @@ body {
     --popover: 222 47% 11%;
     --popover-foreground: 210 20% 98%;
 
-    --primary: 187 100% 38%; /* Teal as primary in dark mode */
+    --primary: 187 100% 38%;
     --primary-foreground: 0 0% 98%;
 
     --secondary: 222 47% 20%; 
@@ -74,14 +122,14 @@ body {
     --muted: 222 47% 20%;
     --muted-foreground: 210 20% 65%;
 
-    --accent: 235 62% 40%; /* Lighter Deep Blue for accent in dark mode */
+    --accent: 235 62% 40%;
     --accent-foreground: 0 0% 98%;
 
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
 
     --border: 222 47% 25%;
-    --input: 222 47% 25%; /* Input border color in dark mode, previously was 222 47% 15% and --input-border held this value */
+    --input: 222 47% 25%;
     --ring: 187 100% 38%;
     
     --chart-1: 220 70% 50%;
@@ -90,7 +138,7 @@ body {
     --chart-4: 280 65% 60%;
     --chart-5: 340 75% 55%;
 
-    --sidebar-background: 222 47% 9%; /* Very dark for sidebar */
+    --sidebar-background: 222 47% 9%;
     --sidebar-foreground: 0 0% 93.3%;
     --sidebar-primary: 187 100% 38%; 
     --sidebar-primary-foreground: 0 0% 98%;
@@ -98,6 +146,10 @@ body {
     --sidebar-accent-foreground: 0 0% 98%;
     --sidebar-border: 222 47% 12%;
     --sidebar-ring: 187 100% 45%;
+  }
+
+  .dark .matrix-char {
+    color: hsl(var(--primary) / 0.1);
   }
 }
 
@@ -108,7 +160,4 @@ body {
   body {
     @apply bg-background text-foreground;
   }
-  /* The problematic 'input, textarea, select' styling block that caused the error has been removed.
-     Input component borders are now controlled by the --input CSS variable,
-     which is used by the 'border-input' Tailwind class in ShadCN components. */
 }
