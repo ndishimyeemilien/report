@@ -143,8 +143,8 @@ export function StudentForm({ initialData, onClose }: StudentFormProps) {
             createdAt: serverTimestamp(),
         };
         Object.keys(dataForAdd).forEach(key => {
-            if (dataForAdd[key] === undefined && key !== 'createdAt' && key !== 'updatedAt' && key !== 'fullName') {
-                delete dataForAdd[key];
+            if (dataForAdd[key as keyof typeof dataForAdd] === undefined && key !== 'createdAt' && key !== 'updatedAt' && key !== 'fullName') {
+                delete dataForAdd[key as keyof typeof dataForAdd];
             }
         });
         await addDoc(collection(db, "students"), dataForAdd);
