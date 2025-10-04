@@ -3,25 +3,16 @@
  * @fileOverview An AI flow that provides contextual answers based on user role.
  *
  * - contextualChat - A function that provides role-aware answers.
- * - ContextualChatInput - The input type for the contextualChat function.
- * - ContextualChatOutput - The return type for the contextualChat function.
  */
 
 import { ai } from '@/ai/genkit';
-import { z } from 'genkit';
+import {
+  ContextualChatInputSchema,
+  type ContextualChatInput,
+  ContextualChatOutputSchema,
+  type ContextualChatOutput
+} from '@/types/ai';
 
-export const ContextualChatInputSchema = z.object({
-  userRole: z.string().describe("The role of the user (e.g., 'Admin', 'Teacher', 'Secretary')."),
-  userEmail: z.string().describe("The email of the user asking the question."),
-  question: z.string().describe("The user's question."),
-  chatHistory: z.string().describe("The recent history of the conversation for context."),
-});
-export type ContextualChatInput = z.infer<typeof ContextualChatInputSchema>;
-
-export const ContextualChatOutputSchema = z.object({
-  answer: z.string().describe("The AI's contextual answer to the user's question."),
-});
-export type ContextualChatOutput = z.infer<typeof ContextualChatOutputSchema>;
 
 export async function contextualChat(input: ContextualChatInput): Promise<ContextualChatOutput> {
   return contextualChatFlow(input);

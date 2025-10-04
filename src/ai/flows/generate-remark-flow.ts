@@ -1,28 +1,17 @@
-
 'use server';
 /**
  * @fileOverview An AI flow for generating remarks based on student performance.
  *
  * - generateRemark - A function that generates a remark for a student's grade.
- * - GenerateRemarkInput - The input type for the generateRemark function.
- * - GenerateRemarkOutput - The return type for the generateRemark function.
  */
 
 import { ai } from '@/ai/genkit';
-import { z } from 'genkit';
-
-const GenerateRemarkInputSchema = z.object({
-  studentName: z.string().describe("The name of the student."),
-  courseName: z.string().describe("The name of the course or subject."),
-  totalMarks: z.number().describe("The total marks obtained by the student (out of 100)."),
-  status: z.enum(['Pass', 'Fail']).describe("The student's pass/fail status."),
-});
-export type GenerateRemarkInput = z.infer<typeof GenerateRemarkInputSchema>;
-
-const GenerateRemarkOutputSchema = z.object({
-  remark: z.string().describe("A concise, encouraging, and constructive remark for the student based on their performance."),
-});
-export type GenerateRemarkOutput = z.infer<typeof GenerateRemarkOutputSchema>;
+import {
+  GenerateRemarkInputSchema,
+  type GenerateRemarkInput,
+  GenerateRemarkOutputSchema,
+  type GenerateRemarkOutput
+} from '@/types/ai';
 
 
 export async function generateRemark(input: GenerateRemarkInput): Promise<GenerateRemarkOutput> {
