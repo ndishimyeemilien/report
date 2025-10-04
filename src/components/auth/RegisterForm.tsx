@@ -25,7 +25,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 
-const ADMIN_SECRET_CODE = "0784280330"; 
+const ADMIN_SECRET_CODE = "0792662109"; 
 
 const formSchema = z.object({
   email: z.string().email({ message: "Invalid email address." }),
