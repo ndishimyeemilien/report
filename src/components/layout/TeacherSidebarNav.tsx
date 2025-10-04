@@ -1,25 +1,25 @@
-
 "use client";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { LayoutDashboard, BookOpen, Edit, CheckSquare } from "lucide-react"; 
+import { LayoutDashboard, BookOpen, Edit, CheckSquare, Users } from "lucide-react"; // Added Users icon
+import { useTranslation } from "react-i18next";
 
 export interface NavItem {
   href: string;
-  label: string;
+  labelKey: string; 
   icon: React.ElementType;
   disabled?: boolean;
 }
 
-// Teacher specific navigation
-export const teacherNavItems: NavItem[] = [
-  { href: "/teacher/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/teacher/courses", label: "My Courses", icon: BookOpen }, 
-  { href: "/teacher/grades", label: "Enter Grades", icon: Edit },
-  { href: "/teacher/attendance", label: "Attendance", icon: CheckSquare },
+export const teacherNavItemsData: NavItem[] = [
+  { href: "/teacher/dashboard", labelKey: "navTeacherDashboard", icon: LayoutDashboard },
+  { href: "/teacher/courses", labelKey: "navTeacherMyCourses", icon: BookOpen }, 
+  { href: "/teacher/grades", labelKey: "navTeacherEnterGrades", icon: Edit },
+  { href: "/teacher/attendance", labelKey: "navTeacherAttendance", icon: CheckSquare },
+  { href: "/teacher/students", labelKey: "navTeacherStudents", icon: Users }, // New item for students
 ];
 
 interface TeacherSidebarNavProps {
@@ -28,10 +28,11 @@ interface TeacherSidebarNavProps {
 
 export default function TeacherSidebarNav({ isMobile = false }: TeacherSidebarNavProps) {
   const pathname = usePathname();
-  const navItems = teacherNavItems;
+  const { t } = useTranslation();
+  const navItems = teacherNavItemsData;
 
   return (
-    <nav className={cn("flex flex-col gap-2 px-2 py-4", isMobile ? "" : "md:px-4")}>
+    <nav className={cn("flex flex-col gap-1 px-2 py-4", isMobile ? "" : "md:px-4")}>
       {navItems.map((item) => {
         const isActive =
           pathname === item.href ||
@@ -49,7 +50,7 @@ export default function TeacherSidebarNav({ isMobile = false }: TeacherSidebarNa
         
         return (
           <Button
-            key={item.href}
+            key={item.labelKey} 
             asChild
             variant={buttonVariant}
             className={buttonClassName}
@@ -57,7 +58,7 @@ export default function TeacherSidebarNav({ isMobile = false }: TeacherSidebarNa
           >
             <Link href={item.disabled ? "#" : item.href}>
               <item.icon className="mr-3 h-5 w-5" />
-              {item.label}
+              {t(item.labelKey)}
             </Link>
           </Button>
         );

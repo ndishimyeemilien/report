@@ -1,4 +1,3 @@
-
 "use client";
 
 import { Button } from "@/components/ui/button";
@@ -10,22 +9,24 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"; // Added SheetHeader, SheetTitle
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { useAuth } from "@/context/AuthContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Menu, LogOut, UserCircle, Settings, Sun, Moon } from "lucide-react";
+import { Menu, LogOut, Settings, Sun, Moon } from "lucide-react";
 import Link from "next/link";
 import Logo from "../shared/Logo";
 import TeacherSidebarNav from "./TeacherSidebarNav"; 
 import { useState, useEffect } from "react";
+import LanguageSwitcher from "@/components/shared/LanguageSwitcher";
 
-// Simple theme toggle (can be shared or duplicated)
 const ThemeToggle = () => {
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
+    setIsMounted(true);
     const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-    const savedTheme = typeof window !== 'undefined' ? localStorage.getItem('theme') : null;
+    const savedTheme = localStorage.getItem('theme');
     if (savedTheme) {
       setIsDarkMode(savedTheme === 'dark');
     } else {
@@ -34,14 +35,24 @@ const ThemeToggle = () => {
   }, []);
   
   useEffect(() => {
-    if (isDarkMode) {
-      document.documentElement.classList.add('dark');
-      if (typeof window !== 'undefined') localStorage.setItem('theme', 'dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-      if (typeof window !== 'undefined') localStorage.setItem('theme', 'light');
+    if (isMounted) {
+      if (isDarkMode) {
+        document.documentElement.classList.add('dark');
+        localStorage.setItem('theme', 'dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+        localStorage.setItem('theme', 'light');
+      }
     }
-  }, [isDarkMode]);
+  }, [isDarkMode, isMounted]);
+
+  if (!isMounted) {
+    return (
+      <Button variant="ghost" size="icon" disabled>
+        <Sun className="h-5 w-5" />
+      </Button>
+    );
+  }
 
   return (
     <Button variant="ghost" size="icon" onClick={() => setIsDarkMode(!isDarkMode)}>
@@ -70,10 +81,10 @@ export default function TeacherHeader() {
             </Button>
           </SheetTrigger>
           <SheetContent side="left" className="flex flex-col p-0 pt-4 bg-sidebar text-sidebar-foreground">
-            <SheetHeader>
-              <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
+            <SheetHeader className="border-b border-sidebar-border px-4 pb-4">
+              <SheetTitle>Menu</SheetTitle> 
             </SheetHeader>
-             <div className="px-4 mb-4">
+             <div className="px-4 mb-4 mt-2"> 
                 <Logo className="text-sidebar-foreground"/>
              </div>
             <TeacherSidebarNav isMobile={true} />
@@ -81,7 +92,8 @@ export default function TeacherHeader() {
         </Sheet>
       </div>
       
-      <div className="flex w-full items-center justify-end gap-4 md:ml-auto">
+      <div className="flex w-full items-center justify-end gap-2 md:ml-auto"> 
+        <LanguageSwitcher />
         <ThemeToggle />
         {currentUser && userProfile ? (
           <DropdownMenu>
