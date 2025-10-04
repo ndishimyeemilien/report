@@ -19,7 +19,7 @@ import { useToast } from "@/hooks/use-toast";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { auth, db } from "@/lib/firebase";
 import { doc, setDoc, serverTimestamp, type FieldValue } from "firebase/firestore";
-import type { UserProfile, UserRole } from "@/types";
+import type { UserProfile, UserRole, UserStatus } from "@/types";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useState } from "react";
@@ -75,16 +75,19 @@ export function RegisterForm() {
   const selectedRole = form.watch("role");
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    console.log("RegisterForm onSubmit triggered with values:", values); // Benign console log added
     setIsLoading(true);
     
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
       const user = userCredential.user;
 
+      // Admin users are approved by default. Others are pending.
+      const userStatus: UserStatus = values.role === 'Admin' ? 'approved' : 'pending';
+
       const userProfileData: Omit<UserProfile, 'uid'> & { createdAt: FieldValue; updatedAt: FieldValue } = {
         email: user.email,
         role: values.role as UserRole,
+        status: userStatus,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       };
@@ -92,7 +95,9 @@ export function RegisterForm() {
 
       toast({
         title: "Registration Successful",
-        description: `Your ${values.role} account has been created. Please login.`,
+        description: userStatus === 'pending'
+          ? "Your account has been created and is pending admin approval. You will be notified."
+          : `Your ${values.role} account has been created. Please login.`,
       });
       router.push("/login");
     } catch (error: any) {

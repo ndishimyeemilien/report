@@ -49,16 +49,51 @@ export function LoginForm() {
       const userCredential = await signInWithEmailAndPassword(auth, values.email, values.password);
       const user = userCredential.user;
 
-      // Fetch user profile to determine role for redirection
       const userDocRef = doc(db, "users", user.uid);
       const userDocSnap = await getDoc(userDocRef);
 
       if (userDocSnap.exists()) {
         const userProfile = userDocSnap.data() as UserProfile;
+
+        // Check user status
+        if (userProfile.status === 'pending') {
+          toast({
+            title: "Account Pending",
+            description: "Your account is awaiting admin approval. Please check back later.",
+            variant: "destructive",
+          });
+          await auth.signOut();
+          setIsLoading(false);
+          return;
+        }
+
+        if (userProfile.status === 'rejected') {
+          toast({
+            title: "Account Rejected",
+            description: "Your account registration has been rejected. Please contact an administrator.",
+            variant: "destructive",
+          });
+          await auth.signOut();
+          setIsLoading(false);
+          return;
+        }
+
+        if (userProfile.status !== 'approved') {
+          toast({
+            title: "Access Denied",
+            description: "Your account is not approved for access. Please contact an administrator.",
+            variant: "destructive",
+          });
+          await auth.signOut();
+          setIsLoading(false);
+          return;
+        }
+
         toast({
           title: "Login Successful",
           description: "Welcome back!",
         });
+
         if (userProfile.role === "Admin") {
           router.push("/admin/dashboard");
         } else if (userProfile.role === "Teacher") {
@@ -67,17 +102,15 @@ export function LoginForm() {
           router.push("/secretary/dashboard");
         }
          else {
-          // Fallback if role is not defined or unexpected
           router.push("/");
         }
       } else {
-        // Should not happen if registration creates user doc, but handle defensively
         toast({
           title: "Login Failed",
           description: "User profile not found. Please contact support.",
           variant: "destructive",
         });
-         await auth.signOut(); // Sign out user as profile is missing
+         await auth.signOut(); 
       }
     } catch (error: any) {
       let description = "An unexpected error occurred. Please try again.";

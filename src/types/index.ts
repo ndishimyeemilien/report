@@ -1,4 +1,5 @@
 
+
 export interface Course {
   id: string;
   name: string; 
@@ -59,11 +60,13 @@ export interface Grade {
 }
 
 export type UserRole = 'Admin' | 'Teacher' | 'Secretary';
+export type UserStatus = 'pending' | 'approved' | 'rejected';
 
 export interface UserProfile {
   uid: string;
   email: string | null;
   role: UserRole;
+  status: UserStatus; // Added status field
   schoolId?: string; 
   createdAt?: Date;
   updatedAt?: Date;
