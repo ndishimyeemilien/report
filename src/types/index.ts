@@ -1,23 +1,22 @@
 
-
 export interface Course {
   id: string;
-  name: string; // This will now be the subject name, e.g., Mathematics
-  code: string; // Subject code, e.g., MATH101
-  description?: string | null; // Allow null for deletion
-  teacherId?: string; // ID of the user assigned as teacher
-  teacherName?: string | null; // Denormalized teacher name for display, allow null
-  department?: string | null; // Optional: Department the subject belongs to
+  name: string; 
+  code: string; 
+  description?: string | null; 
+  teacherId?: string; 
+  teacherName?: string | null; 
+  department?: string | null; 
   
-  category: string; // e.g., "General Education", "TVET"
-  combination: string; // e.g., "MCB", "Software Development"
+  category: string; 
+  combination: string; 
 
   createdAt: Date;
   updatedAt: Date;
 }
 
 export interface Student {
-  id: string; // Firebase document ID
+  id: string; 
   fullName: string;
   studentSystemId?: string; 
   email?: string; 
@@ -25,17 +24,18 @@ export interface Student {
   className?: string; 
   dateOfBirth?: string; 
   placeOfBirth?: string; 
-  gender?: 'Male' | 'Female' | 'Other' | ''; // Added gender field
+  gender?: 'Male' | 'Female' | 'Other' | ''; 
+  conduct?: string; // Added for report card
   createdAt: Date;
   updatedAt: Date;
 }
 
 export interface Enrollment {
-  id: string; // Firebase document ID
+  id: string; 
   studentId: string;
-  studentName: string; // Denormalized
-  courseId: string; // This refers to the ID of a Course (subject)
-  courseName: string; // Denormalized (e.g. "Mathematics (MATH101)")
+  studentName: string; 
+  courseId: string; 
+  courseName: string; 
   enrolledAt: Date;
 }
 
@@ -51,7 +51,7 @@ export interface Grade {
   totalMarks?: number | null;
   status: 'Pass' | 'Fail';
   remarks?: string;
-  term?: string; // e.g., "Term 1", "Term 2"
+  term?: string; 
   enteredByTeacherId?: string; 
   enteredByTeacherEmail?: string; 
   createdAt: Date;
@@ -64,6 +64,7 @@ export interface UserProfile {
   uid: string;
   email: string | null;
   role: UserRole;
+  schoolId?: string; 
   createdAt?: Date;
   updatedAt?: Date;
   assignedCourseNames?: string[]; 
@@ -92,15 +93,29 @@ export interface ClassCourseAssignment {
   assignedAt: Date;
 }
 
+export type SchoolType = 'REB' | 'TVET' | 'Other';
+
+export interface School {
+  id: string;
+  name: string;
+  type: SchoolType;
+  adminUids: string[]; 
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export interface SystemSettings {
-  id?: string; // Document ID, e.g., "generalConfig"
+  id?: string; 
+  schoolName?: string; 
+  schoolAddress?: string; // Added
+  schoolPhoneNumber?: string; // Added
+  schoolLogoUrl?: string; // Added
   defaultAcademicYear?: string;
   defaultTerm?: string;
   updatedAt?: Date;
-  updatedBy?: string; // UID of admin who last updated
+  updatedBy?: string; 
 }
 
-// --- New types for Attendance ---
 export type AttendanceStatus = 'Present' | 'Absent' | 'Late' | 'Excused';
 
 export interface DailyAttendanceRecord {
@@ -109,49 +124,42 @@ export interface DailyAttendanceRecord {
   className: string; 
   subjectId: string;
   subjectName: string; 
-  date: string; // ISO string: YYYY-MM-DD
-  attendanceData: Record<string, AttendanceStatus>; // Key: studentId, Value: status
+  date: string; 
+  attendanceData: Record<string, AttendanceStatus>; 
   markedByTeacherId: string;
   markedByTeacherEmail?: string;
   createdAt: Date;
   updatedAt: Date;
 }
-// --- End of New types for Attendance ---
 
-// --- New type for Academic Terms ---
 export interface AcademicTerm {
   id: string;
-  name: string; // e.g., "Term 1", "First Semester"
-  academicYear: string; // e.g., "2023-2024"
-  startDate: string; // ISO string: YYYY-MM-DD
-  endDate: string; // ISO string: YYYY-MM-DD
-  isCurrent?: boolean; // Optional: to mark the currently active term
+  name: string; 
+  academicYear: string; 
+  startDate: string; 
+  endDate: string; 
+  isCurrent?: boolean; 
   createdAt: Date;
   updatedAt: Date;
-  createdBy?: string; // UID of admin who created
+  createdBy?: string; 
 }
-// --- End of New type for Academic Terms ---
 
-// --- New type for Teacher Groups ---
 export interface TeacherGroup {
     id: string;
     name: string;
     description?: string | null;
-    memberTeacherIds: string[]; // Array of UserProfile uids who are teachers
+    memberTeacherIds: string[]; 
     createdAt: Date;
     updatedAt: Date;
-    createdBy?: string; // UID of admin who created
+    createdBy?: string; 
 }
-// --- End of New type for Teacher Groups ---
 
-// --- New type for Feedback ---
 export interface Feedback {
   id?: string;
-  name?: string; // Optional
+  name?: string; 
   message: string;
-  userId?: string; // Optional: UID of logged-in user
-  userEmail?: string; // Optional: Email of logged-in user
+  userId?: string; 
+  userEmail?: string; 
   createdAt: Date;
-  status?: 'new' | 'read' | 'archived'; // Optional: for admin tracking
+  status?: 'new' | 'read' | 'archived'; 
 }
-// --- End of New type for Feedback ---
