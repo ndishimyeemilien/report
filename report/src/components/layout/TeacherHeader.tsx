@@ -22,10 +22,12 @@ import LanguageSwitcher from "@/components/shared/LanguageSwitcher";
 
 const ThemeToggle = () => {
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
+    setIsMounted(true);
     const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-    const savedTheme = typeof window !== 'undefined' ? localStorage.getItem('theme') : null;
+    const savedTheme = localStorage.getItem('theme');
     if (savedTheme) {
       setIsDarkMode(savedTheme === 'dark');
     } else {
@@ -34,14 +36,24 @@ const ThemeToggle = () => {
   }, []);
   
   useEffect(() => {
-    if (isDarkMode) {
-      document.documentElement.classList.add('dark');
-      if (typeof window !== 'undefined') localStorage.setItem('theme', 'dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-      if (typeof window !== 'undefined') localStorage.setItem('theme', 'light');
+    if (isMounted) {
+      if (isDarkMode) {
+        document.documentElement.classList.add('dark');
+        localStorage.setItem('theme', 'dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+        localStorage.setItem('theme', 'light');
+      }
     }
-  }, [isDarkMode]);
+  }, [isDarkMode, isMounted]);
+
+  if (!isMounted) {
+    return (
+      <Button variant="ghost" size="icon" disabled>
+        <Sun className="h-5 w-5" />
+      </Button>
+    );
+  }
 
   return (
     <Button variant="ghost" size="icon" onClick={() => setIsDarkMode(!isDarkMode)}>
